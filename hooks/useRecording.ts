@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { Step } from "../types";
-import { getSimpleSelector } from "../lib/selectors/selectorGenerator";
+import { getSimpleSelector, generateRobustLocator } from "../lib/selectors/selectorGenerator";
 
 interface UseRecordingOptions {
   autoCapture?: boolean;
@@ -55,9 +55,20 @@ export function useRecording({
 
     const value = typingValueRef.current ?? "";
     const masked = value ? "*".repeat(value.length) : "";
+    
+    // 요소를 찾아서 locator 생성
+    let locator;
+    try {
+      const element = document.querySelector(typingSelectorRef.current) as HTMLElement;
+      if (element) {
+        locator = generateRobustLocator(element);
+      }
+    } catch {}
+    
     const step: Step = {
       type: "type",
-      selector: typingSelectorRef.current,
+      selector: typingSelectorRef.current, // 하위 호환성
+      locator, // 새로운 다중 selector 시스템
       text: masked,
       originalText: value,
       submit: typingSubmitRef.current || undefined,
@@ -119,9 +130,12 @@ export function useRecording({
       if (el.closest("select")) return;
 
       const selector = getSimpleSelector(el);
+      const locator = generateRobustLocator(el);
+      
       const step: Step = {
         type: "click",
-        selector,
+        selector, // 하위 호환성
+        locator,  // 새로운 다중 selector 시스템
         url: window.location.href,
       };
 
@@ -146,6 +160,7 @@ export function useRecording({
       // select 요소 처리
       if (tag === "select") {
         const selector = getSimpleSelector(el);
+        const locator = generateRobustLocator(el);
         const value: string = el.value ?? "";
 
         // 중복 방지
@@ -154,7 +169,8 @@ export function useRecording({
 
         const step: Step = {
           type: "select",
-          selector,
+          selector, // 하위 호환성
+          locator,  // 새로운 다중 selector 시스템
           value,
           url: window.location.href,
         };
@@ -299,6 +315,7 @@ export function useRecording({
       if (tag !== "select") return;
 
       const selector = getSimpleSelector(el);
+      const locator = generateRobustLocator(el);
       const value: string = el.value ?? "";
 
       // 중복 방지
@@ -307,7 +324,8 @@ export function useRecording({
 
       const step: Step = {
         type: "select",
-        selector,
+        selector, // 하위 호환성
+        locator,  // 새로운 다중 selector 시스템
         value,
         url: window.location.href,
       };

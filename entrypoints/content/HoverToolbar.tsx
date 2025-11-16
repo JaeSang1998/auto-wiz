@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import type { Step } from "../../types";
-import { makeSelector } from "../../lib/selectors/selectorGenerator";
+import { makeSelector, generateRobustLocator } from "../../lib/selectors/selectorGenerator";
 
 interface HoverToolbarProps {
   x: number;
@@ -153,7 +153,8 @@ export default function HoverToolbar({
   const elementInfo = getElementInfo(target);
   const hasParent = target.parentElement !== null && target.parentElement !== document.body;
   const hasChild = target.children.length > 0;
-  const selector = makeSelector(target);
+  const selector = makeSelector(target); // UI 표시용
+  const locator = generateRobustLocator(target); // Step 기록용
 
   /**
    * Element 스크린샷 캡처
@@ -262,12 +263,13 @@ export default function HoverToolbar({
       const screenshot = await captureElementScreenshot(target, selector);
       onRecord({
         type: "click",
-        selector,
+        selector, // 하위 호환성
+        locator,  // 새로운 다중 selector 시스템
         url: window.location.href,
         screenshot: screenshot || undefined,
       });
     },
-    [target, selector, captureElementScreenshot, onRecord]
+    [target, selector, locator, captureElementScreenshot, onRecord]
   );
 
   const handleScreenshot = useCallback(
@@ -304,7 +306,8 @@ export default function HoverToolbar({
           captureElementScreenshot(target, selector).then((screenshot) => {
             onRecord({
               type: "type",
-              selector,
+              selector, // 하위 호환성
+              locator,  // 새로운 다중 selector 시스템
               text: maskedDisplayText,
               originalText: text,
               url: window.location.href,
@@ -322,7 +325,7 @@ export default function HoverToolbar({
         onTextInput(text);
       }
     },
-    [target, selector, captureElementScreenshot, onRecord, onShowTextInput]
+    [target, selector, locator, captureElementScreenshot, onRecord, onShowTextInput]
   );
 
   const handleSelect = useCallback(
@@ -346,7 +349,8 @@ export default function HoverToolbar({
           captureElementScreenshot(target, selector).then((screenshot) => {
             onRecord({
               type: "select",
-              selector,
+              selector, // 하위 호환성
+              locator,  // 새로운 다중 selector 시스템
               value: selectedValue,
               url: window.location.href,
               screenshot: screenshot || undefined,
@@ -372,7 +376,7 @@ export default function HoverToolbar({
         }
       }
     },
-    [target, selector, captureElementScreenshot, onRecord, onShowSelectOption]
+    [target, selector, locator, captureElementScreenshot, onRecord, onShowSelectOption]
   );
 
   const handleExtract = useCallback(
@@ -382,12 +386,13 @@ export default function HoverToolbar({
       const screenshot = await captureElementScreenshot(target, selector);
       onRecord({
         type: "extract",
-        selector,
+        selector, // 하위 호환성
+        locator,  // 새로운 다중 selector 시스템
         url: window.location.href,
         screenshot: screenshot || undefined,
       });
     },
-    [target, selector, captureElementScreenshot, onRecord]
+    [target, selector, locator, captureElementScreenshot, onRecord]
   );
 
   const handleNavigate = useCallback(
@@ -413,13 +418,14 @@ export default function HoverToolbar({
       if (!isNaN(timeoutMs)) {
         onRecord({
           type: "waitFor",
-          selector,
+          selector, // 하위 호환성
+          locator,  // 새로운 다중 selector 시스템
           timeoutMs,
           url: window.location.href,
         });
       }
     },
-    [selector, onRecord]
+    [selector, locator, onRecord]
   );
 
   return (
