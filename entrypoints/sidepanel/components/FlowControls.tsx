@@ -120,64 +120,13 @@ export function FlowControls({
         )}
       </div>
 
-      {/* Flow Action Buttons */}
+      {/* Flow Action Buttons - 일렬 레이아웃 */}
       <div style={{ display: "flex", gap: "10px" }}>
-        {isRunning ? (
-          <button
-            onClick={onStop}
-            style={{
-              flex: 1,
-              padding: "11px 16px",
-              background: "#ffffff",
-              color: "#1a1a1a",
-              border: "1px solid #e5e5e5",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontSize: "13px",
-              fontWeight: 500,
-              boxShadow: "none",
-              letterSpacing: "-0.01em",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-            }}
-          >
-            <Pause size={16} strokeWidth={2} />
-            Stop Flow
-          </button>
-        ) : (
-          <button
-            onClick={onRun}
-            disabled={!hasSteps}
-            style={{
-              flex: 1,
-              padding: "11px 16px",
-              background: hasSteps ? "#1a1a1a" : "#fafafa",
-              color: hasSteps ? "#ffffff" : "#a3a3a3",
-              border: "1px solid #e5e5e5",
-              borderRadius: "8px",
-              cursor: hasSteps ? "pointer" : "not-allowed",
-              fontSize: "13px",
-              fontWeight: 500,
-              boxShadow: "none",
-              letterSpacing: "-0.01em",
-              opacity: hasSteps ? 1 : 0.4,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-            }}
-          >
-            <Play size={16} strokeWidth={2} fill={hasSteps ? "currentColor" : "none"} />
-            Run Flow
-          </button>
-        )}
-
         <button
           onClick={onUndo}
           disabled={!hasSteps || isRunning}
           style={{
+            flex: 1,
             padding: "11px 16px",
             background: !hasSteps || isRunning ? "#fafafa" : "#f5f5f5",
             color: !hasSteps || isRunning ? "#a3a3a3" : "#404040",
@@ -203,6 +152,7 @@ export function FlowControls({
           onClick={onClear}
           disabled={!hasSteps || recording || isRunning}
           style={{
+            flex: 1,
             padding: "11px 16px",
             background: !hasSteps || recording || isRunning ? "#fafafa" : "#ffffff",
             color: !hasSteps || recording || isRunning ? "#a3a3a3" : "#dc2626",
@@ -228,6 +178,7 @@ export function FlowControls({
           onClick={onSendToBackend}
           disabled={!hasSteps || isRunning}
           style={{
+            flex: 2,
             padding: "11px 16px",
             background: !hasSteps || isRunning ? "#fafafa" : "#f5f5f5",
             color: !hasSteps || isRunning ? "#a3a3a3" : "#404040",

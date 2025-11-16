@@ -215,7 +215,8 @@ function ContentApp() {
   }, [setInspectedElement]);
 
   // 현재 표시할 target과 coords 결정
-  const displayTarget = locked ? lockedTarget : target;
+  // locked 상태일 때는 inspectedElement를 우선 사용 (Parent/Child 네비게이션 반영)
+  const displayTarget = locked ? (inspectedElement || lockedTarget) : target;
   const displayCoords = locked ? lockedCoords : coords;
 
   return (

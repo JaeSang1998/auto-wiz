@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { MousePointer2, Keyboard, ListChecks, Download, Globe, Clock, GripVertical, X } from "lucide-react";
+import { MousePointer2, Keyboard, ListChecks, Download, Globe, Clock, X, Shield, ShieldAlert, ChevronUp, ChevronDown } from "lucide-react";
 import type { Step } from "../../../types";
 
 interface FlowStepItemProps {
@@ -11,7 +11,9 @@ interface FlowStepItemProps {
   screenshot?: { screenshot: string; elementInfo: any };
   onRemove: (index: number) => void;
   onEdit?: (index: number) => void;
-  onReorder?: (fromIndex: number, toIndex: number) => void;
+  onMoveUp?: (index: number) => void;
+  onMoveDown?: (index: number) => void;
+  totalSteps?: number;
 }
 
 /**
@@ -26,45 +28,13 @@ export function FlowStepItem({
   screenshot,
   onRemove,
   onEdit,
-  onReorder,
+  onMoveUp,
+  onMoveDown,
+  totalSteps = 0,
 }: FlowStepItemProps) {
-  const [isDragging, setIsDragging] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
-
-  const handleDragStart = (e: React.DragEvent) => {
-    setIsDragging(true);
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", index.toString());
-  };
-
-  const handleDragEnd = () => {
-    setIsDragging(false);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragOver(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-
-    const fromIndex = parseInt(e.dataTransfer.getData("text/plain"));
-    const toIndex = index;
-
-    if (onReorder && fromIndex !== toIndex) {
-      onReorder(fromIndex, toIndex);
-    }
-  };
 
   const getStepIcon = (type: Step["type"]) => {
-    const iconProps = { size: 14, strokeWidth: 2 };
+    const iconProps = { size: 16, strokeWidth: 2 };
     switch (type) {
       case "click":
         return <MousePointer2 {...iconProps} />;
@@ -102,91 +72,239 @@ export function FlowStepItem({
     }
   };
 
+  /**
+   * 메타데이터를 활용해서 사람이 읽기 쉬운 요소 설명 생성
+   */
+  const getElementDescription = (step: Step): string => {
+    if (step.type === "navigate" || step.type === "waitForNavigation") {
+      return "";
+    }
+
+    const locator = "locator" in step ? step.locator : undefined;
+    const metadata = locator?.metadata;
+
+    if (!metadata) {
+      // fallback: selector를 간략하게 표시
+      const selector = "selector" in step ? step.selector : "";
+      return simplifySelector(selector);
+    }
+
+    // 메타데이터에서 가장 의미있는 정보 추출
+    const parts: string[] = [];
+
+    // 1순위: text content
+    if (metadata.text) {
+      parts.push(`"${truncateText(metadata.text, 30)}"`);
+    }
+
+    // 2순위: placeholder (input 필드인 경우)
+    else if (metadata.placeholder) {
+      parts.push(`"${metadata.placeholder}"`);
+    }
+
+    // 3순위: aria-label
+    else if (metadata.ariaLabel) {
+      parts.push(`"${metadata.ariaLabel}"`);
+    }
+
+    // 4순위: title
+    else if (metadata.title) {
+      parts.push(`"${metadata.title}"`);
+    }
+
+    // 요소 타입 정보
+    if (metadata.role) {
+      parts.push(metadata.role);
+    } else if (metadata.tagName && metadata.tagName !== "div" && metadata.tagName !== "span") {
+      parts.push(metadata.tagName);
+    }
+
+    // testId가 있으면 힌트로 표시
+    if (metadata.testId && parts.length === 0) {
+      parts.push(`[${metadata.testId}]`);
+    }
+
+    return parts.length > 0 ? parts.join(" ") : simplifySelector("selector" in step ? step.selector : "");
+  };
+
+  /**
+   * Selector를 간략하게 표시 (ID나 class만 추출)
+   */
+  const simplifySelector = (selector: string): string => {
+    if (!selector) return "element";
+
+    // ID selector
+    const idMatch = selector.match(/#([\w-]+)/);
+    if (idMatch) return `#${idMatch[1]}`;
+
+    // data-testid
+    const testIdMatch = selector.match(/\[data-testid=["']([^"']+)["']\]/);
+    if (testIdMatch) return `[${testIdMatch[1]}]`;
+
+    // class (첫 번째만)
+    const classMatch = selector.match(/\.([\w-]+)/);
+    if (classMatch) return `.${classMatch[1]}`;
+
+    // 태그명
+    const tagMatch = selector.match(/^(\w+)/);
+    if (tagMatch) return tagMatch[1];
+
+    return "element";
+  };
+
+  /**
+   * 텍스트를 truncate
+   */
+  const truncateText = (text: string, maxLength: number): string => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
+  };
+
+  /**
+   * Step의 주요 액션을 사람이 읽기 쉬운 형태로 표시
+   */
   const getStepDescription = (step: Step) => {
+    const elementDesc = getElementDescription(step);
+
     switch (step.type) {
       case "click":
-        return `Click ${step.selector}`;
+        return elementDesc ? `Click ${elementDesc}` : "Click element";
       case "type":
-        return `Type "${step.text || step.originalText}" into ${step.selector}${
-          step.submit ? " (Submit)" : ""
+        const textToShow = step.text || step.originalText || "";
+        const displayText = textToShow.length > 30 ? textToShow.substring(0, 30) + "..." : textToShow;
+        return `Type "${displayText}"${elementDesc ? ` into ${elementDesc}` : ""}${
+          step.submit ? " ⏎" : ""
         }`;
       case "select":
-        return `Select "${step.value}" in ${step.selector}`;
+        return `Select "${step.value}"${elementDesc ? ` from ${elementDesc}` : ""}`;
       case "extract":
-        return `Extract from ${step.selector}`;
+        return elementDesc ? `Extract from ${elementDesc}` : "Extract data";
       case "navigate":
-        return `Navigate to ${step.url}`;
+        const url = step.url.length > 50 ? step.url.substring(0, 50) + "..." : step.url;
+        return `Navigate to ${url}`;
       case "waitFor":
-        return `Wait for ${step.selector || `${step.timeoutMs}ms`}`;
+        if (step.selector) {
+          return elementDesc ? `Wait for ${elementDesc}` : "Wait for element";
+        }
+        return `Wait ${step.timeoutMs}ms`;
       default:
         return JSON.stringify(step);
     }
   };
 
+  /**
+   * Selector 신뢰도 계산 (높을수록 견고함)
+   */
+  const getSelectorReliability = (step: Step): "high" | "medium" | "low" => {
+    if (step.type === "navigate" || step.type === "waitForNavigation") {
+      return "high"; // URL은 항상 신뢰도 높음
+    }
+
+    const locator = "locator" in step ? step.locator : undefined;
+    
+    if (!locator) {
+      return "low"; // locator가 없으면 낮음
+    }
+
+    const metadata = locator.metadata;
+    const fallbackCount = locator.fallbacks?.length || 0;
+
+    // testId나 role이 있고 fallback이 있으면 높음
+    if (metadata?.testId || metadata?.role) {
+      return fallbackCount >= 1 ? "high" : "medium";
+    }
+
+    // fallback이 2개 이상이면 중간
+    if (fallbackCount >= 2) {
+      return "medium";
+    }
+
+    return "low";
+  };
+
+  /**
+   * 신뢰도 뱃지 렌더링
+   */
+  const renderReliabilityBadge = (reliability: "high" | "medium" | "low") => {
+    if (reliability === "high") {
+      return (
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "4px",
+            fontSize: "11px",
+            padding: "4px 8px",
+            background: "#dcfce7",
+            color: "#16a34a",
+            borderRadius: "4px",
+            fontWeight: 600,
+          }}
+          title="Highly reliable selector with multiple fallbacks"
+        >
+          <Shield size={11} strokeWidth={2.5} />
+          Robust
+        </span>
+      );
+    }
+    
+    if (reliability === "low") {
+      return (
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "4px",
+            fontSize: "11px",
+            padding: "4px 8px",
+            background: "#fee2e2",
+            color: "#dc2626",
+            borderRadius: "4px",
+            fontWeight: 600,
+          }}
+          title="Basic CSS selector - may be fragile"
+        >
+          <ShieldAlert size={11} strokeWidth={2.5} />
+          Basic
+        </span>
+      );
+    }
+
+    return null; // medium은 표시 안함 (노이즈 줄이기)
+  };
+
   return (
     <div
-      draggable={onReorder !== undefined}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
       style={{
-        padding: "16px",
-        background: isDragging
-          ? "#fafafa"
-          : isDragOver
-          ? "#f5f5f5"
-          : isExecuting
-          ? "#fafafa"
-          : isCompleted
-          ? "#f5f5f5"
-          : "#ffffff",
-        border: "1px solid #e5e5e5",
-        borderLeft: isDragOver
+        padding: "16px 0",
+        borderBottom: "1px solid #f5f5f5",
+        borderLeft: isExecuting
           ? "3px solid #1a1a1a"
-          : isExecuting
-          ? "3px solid #737373"
           : isCompleted
-          ? "3px solid #404040"
-          : "1px solid #e5e5e5",
-        borderRadius: "8px",
-        marginBottom: "10px",
-        transition: "all 0.2s ease",
-        cursor: onReorder ? "move" : "default",
-        opacity: isDragging ? 0.5 : 1,
+          ? "3px solid #737373"
+          : "3px solid transparent",
+        paddingLeft: "12px",
+        background: isExecuting ? "#fafafa" : isCompleted ? "#f9f9f9" : "transparent",
+        transition: "all 0.15s ease",
       }}
     >
       {/* Step Header */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "8px",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          {onReorder && (
-            <span
-              style={{
-                cursor: "grab",
-                color: "#d4d4d4",
-                lineHeight: 1,
-                display: "flex",
-                alignItems: "center",
-              }}
-              title="Drag to reorder"
-            >
-              <GripVertical size={16} strokeWidth={2} />
-            </span>
-          )}
+      <div style={{ marginBottom: "12px" }}>
+        {/* 첫 번째 줄: 번호, 타입, 상태, 이동 버튼 */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            marginBottom: "0",
+          }}
+        >
           <span
             style={{
-              fontSize: "12px",
-              fontWeight: 500,
-              color: "#a3a3a3",
-              letterSpacing: "-0.01em",
+              fontSize: "13px",
+              fontWeight: 600,
+              color: "#737373",
+              minWidth: "20px",
             }}
           >
             {index + 1}
@@ -195,13 +313,11 @@ export function FlowStepItem({
             style={{
               fontSize: "12px",
               padding: "4px 10px",
-              background: "#fafafa",
-              border: "1px solid #e5e5e5",
-              borderRadius: "6px",
+              background: "#f5f5f5",
+              borderRadius: "4px",
               fontWeight: 500,
               color: "#404040",
-              letterSpacing: "-0.01em",
-              display: "flex",
+              display: "inline-flex",
               alignItems: "center",
               gap: "6px",
             }}
@@ -209,16 +325,16 @@ export function FlowStepItem({
             {getStepIcon(step.type)}
             {getStepLabel(step.type)}
           </span>
+          {renderReliabilityBadge(getSelectorReliability(step))}
           {isExecuting && (
             <span
               style={{
-                fontSize: "12px",
+                fontSize: "11px",
                 padding: "4px 10px",
                 background: "#1a1a1a",
                 color: "#ffffff",
-                borderRadius: "6px",
-                fontWeight: 500,
-                letterSpacing: "-0.01em",
+                borderRadius: "4px",
+                fontWeight: 600,
               }}
             >
               Running
@@ -227,69 +343,87 @@ export function FlowStepItem({
           {isCompleted && (
             <span
               style={{
-                fontSize: "12px",
+                fontSize: "11px",
                 padding: "4px 10px",
-                background: "#404040",
+                background: "#737373",
                 color: "#ffffff",
-                borderRadius: "6px",
-                fontWeight: 500,
-                letterSpacing: "-0.01em",
+                borderRadius: "4px",
+                fontWeight: 600,
               }}
             >
               Done
             </span>
           )}
-        </div>
-
-        {/* Action Buttons */}
-        <div style={{ display: "flex", gap: "6px" }}>
-          {onEdit && (
+          
+          {/* 우측 버튼 그룹: 이동 + 삭제 */}
+          <div style={{ display: "flex", gap: "4px", marginLeft: "auto", alignItems: "center", paddingRight: "12px" }}>
+            {(onMoveUp || onMoveDown) && (
+              <>
+                <button
+                  onClick={() => onMoveUp?.(index)}
+                  disabled={index === 0}
+                  style={{
+                    padding: "4px",
+                    background: "transparent",
+                    color: index === 0 ? "#d4d4d4" : "#737373",
+                    border: "none",
+                    cursor: index === 0 ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: index === 0 ? 0.3 : 1,
+                  }}
+                  title="Move up"
+                >
+                  <ChevronUp size={16} strokeWidth={2} />
+                </button>
+                <button
+                  onClick={() => onMoveDown?.(index)}
+                  disabled={index === totalSteps - 1}
+                  style={{
+                    padding: "4px",
+                    background: "transparent",
+                    color: index === totalSteps - 1 ? "#d4d4d4" : "#737373",
+                    border: "none",
+                    cursor: index === totalSteps - 1 ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: index === totalSteps - 1 ? 0.3 : 1,
+                  }}
+                  title="Move down"
+                >
+                  <ChevronDown size={16} strokeWidth={2} />
+                </button>
+              </>
+            )}
             <button
-              onClick={() => onEdit(index)}
+              onClick={() => onRemove(index)}
               style={{
-                padding: "6px 12px",
-                background: "#f5f5f5",
-                color: "#404040",
-                border: "1px solid #e5e5e5",
-                borderRadius: "6px",
+                padding: "4px",
+                background: "transparent",
+                color: "#a3a3a3",
+                border: "none",
                 cursor: "pointer",
-                fontSize: "12px",
-                fontWeight: 500,
-                letterSpacing: "-0.01em",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
+              title="Remove"
             >
-              Edit
+              <X size={16} strokeWidth={2} />
             </button>
-          )}
-          <button
-            onClick={() => onRemove(index)}
-            style={{
-              padding: "6px 12px",
-              background: "#ffffff",
-              color: "#dc2626",
-              border: "1px solid #e5e5e5",
-              borderRadius: "6px",
-              cursor: "pointer",
-              fontSize: "12px",
-              fontWeight: 500,
-              letterSpacing: "-0.01em",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <X size={14} strokeWidth={2} />
-            Remove
-          </button>
+          </div>
         </div>
       </div>
 
       {/* Step Description */}
       <div
         style={{
-          fontSize: "13px",
+          fontSize: "14px",
           color: "#404040",
-          marginBottom: extractedData || screenshot ? "12px" : "0",
+          marginBottom: extractedData || screenshot ? "10px" : "0",
+          paddingRight: "12px",
           wordBreak: "break-word",
           lineHeight: "1.5",
         }}
@@ -302,6 +436,7 @@ export function FlowStepItem({
         <div
           style={{
             marginTop: "12px",
+            marginRight: "12px",
             padding: "12px",
             background: "#fafafa",
             border: "1px solid #e5e5e5",
@@ -318,7 +453,7 @@ export function FlowStepItem({
 
       {/* Screenshot */}
       {screenshot && (
-        <div style={{ marginTop: "12px" }}>
+        <div style={{ marginTop: "12px", marginRight: "12px" }}>
           <img
             src={screenshot.screenshot}
             alt="Element screenshot"

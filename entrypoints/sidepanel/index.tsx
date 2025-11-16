@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import ReactDOM from "react-dom/client";
-import { Wand2, Undo } from "lucide-react";
+import { Wand2, Undo, Square } from "lucide-react";
 import type { Flow, FlowUpdatedMessage, SentOkMessage } from "../../types";
 import { useFlowExecution } from "../../hooks/useFlowExecution";
 import { getFlow, saveFlow, clearFlow, removeStep } from "../../lib/storage/flowStorage";
@@ -179,14 +179,31 @@ function SidePanelApp() {
   }, []);
 
   /**
-   * Step 순서 변경 (드래그 앤 드롭)
+   * Step 위로 이동
    */
-  const handleReorderSteps = useCallback(async (fromIndex: number, toIndex: number) => {
-    if (fromIndex === toIndex || !flow) return;
+  const handleMoveUp = useCallback(async (index: number) => {
+    if (index === 0 || !flow) return;
 
     const newSteps = [...flow.steps];
-    const [movedStep] = newSteps.splice(fromIndex, 1);
-    newSteps.splice(toIndex, 0, movedStep);
+    [newSteps[index - 1], newSteps[index]] = [newSteps[index], newSteps[index - 1]];
+
+    const updatedFlow: Flow = {
+      ...flow,
+      steps: newSteps,
+    };
+
+    await saveFlow(updatedFlow);
+    setFlow(updatedFlow);
+  }, [flow]);
+
+  /**
+   * Step 아래로 이동
+   */
+  const handleMoveDown = useCallback(async (index: number) => {
+    if (!flow || index === flow.steps.length - 1) return;
+
+    const newSteps = [...flow.steps];
+    [newSteps[index], newSteps[index + 1]] = [newSteps[index + 1], newSteps[index]];
 
     const updatedFlow: Flow = {
       ...flow,
@@ -245,21 +262,18 @@ function SidePanelApp() {
       {/* Header */}
       <div
         style={{
-          padding: "24px 20px",
+          padding: "16px 20px",
           background: "#ffffff",
           color: "#1a1a1a",
           borderBottom: "1px solid #e5e5e5",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-          <Wand2 size={20} strokeWidth={2} />
-          <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 600, letterSpacing: "-0.02em" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <Wand2 size={18} strokeWidth={2} />
+          <h2 style={{ margin: 0, fontSize: "16px", fontWeight: 600, letterSpacing: "-0.01em" }}>
             Automation Wizard
           </h2>
         </div>
-        <p style={{ margin: "0", fontSize: "13px", color: "#737373" }}>
-          Record and replay browser automation flows
-        </p>
       </div>
 
       {/* Status Messages */}
@@ -331,7 +345,7 @@ function SidePanelApp() {
         style={{
           flex: 1,
           overflowY: "auto",
-          padding: "20px",
+          padding: "8px 0 0",
         }}
       >
         {!hasSteps ? (
@@ -363,7 +377,9 @@ function SidePanelApp() {
                 extractedData={extractedData.get(index)}
                 screenshot={elementScreenshots.get(index)}
                 onRemove={handleRemoveStep}
-                onReorder={handleReorderSteps}
+                onMoveUp={handleMoveUp}
+                onMoveDown={handleMoveDown}
+                totalSteps={flow!.steps.length}
               />
             ))}
           </>
@@ -405,23 +421,37 @@ function SidePanelApp() {
             Undo Last
           </button>
 
-          <div style={{ flex: 2 }}>
-            <input
-              type="text"
-              placeholder="Backend endpoint URL"
-              value={endpoint}
-              onChange={(e) => setEndpoint(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                border: "1px solid #e5e5e5",
-                borderRadius: "8px",
-                fontSize: "13px",
-                background: "#ffffff",
-                color: "#1a1a1a",
-              }}
-            />
-          </div>
+          <button
+            onClick={handleRun}
+            disabled={isRunning}
+            style={{
+              flex: 2,
+              padding: "10px",
+              background: isRunning ? "#dc2626" : "#1a1a1a",
+              color: "#ffffff",
+              border: "1px solid #e5e5e5",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "13px",
+              fontWeight: 500,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+            }}
+          >
+            {isRunning ? (
+              <>
+                <Square size={16} strokeWidth={2} fill="currentColor" />
+                Stop Flow
+              </>
+            ) : (
+              <>
+                <Wand2 size={16} strokeWidth={2} />
+                Run Flow
+              </>
+            )}
+          </button>
         </div>
       )}
     </div>

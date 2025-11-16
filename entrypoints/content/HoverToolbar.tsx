@@ -1,7 +1,20 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { MousePointer2, Keyboard, ListChecks, Download, Globe, Clock, Camera, ChevronUp, ChevronDown } from "lucide-react";
+import {
+  MousePointer2,
+  Keyboard,
+  ListChecks,
+  Download,
+  Globe,
+  Clock,
+  Camera,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
 import type { Step } from "../../types";
-import { makeSelector, generateRobustLocator } from "../../lib/selectors/selectorGenerator";
+import {
+  makeSelector,
+  generateRobustLocator,
+} from "../../lib/selectors/selectorGenerator";
 
 interface HoverToolbarProps {
   x: number;
@@ -20,7 +33,7 @@ interface HoverToolbarProps {
 
 /**
  * 호버된 요소 위에 표시되는 툴바 컴포넌트
- * 
+ *
  * 기능:
  * - Click, Type, Select, Extract 등의 액션 버튼 제공
  * - 드래그 앤 드롭으로 이동 가능 (locked 상태일 때)
@@ -44,12 +57,14 @@ export default function HoverToolbar({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [userMoved, setUserMoved] = useState(false);
-  
+
   // 초기 위치 계산 (즉시 실행)
   const getInitialPosition = () => {
     // localStorage에서 저장된 위치 확인
     try {
-      const savedPosition = localStorage.getItem('automation-wizard-toolbar-position');
+      const savedPosition = localStorage.getItem(
+        "automation-wizard-toolbar-position"
+      );
       if (savedPosition) {
         return JSON.parse(savedPosition);
       }
@@ -62,14 +77,16 @@ export default function HoverToolbar({
     const viewportHeight = window.innerHeight;
     const estimatedWidth = 250;
     const estimatedHeight = 100;
-    
+
     return {
       x: Math.max(20, viewportWidth - estimatedWidth - 20),
       y: Math.max(20, viewportHeight - estimatedHeight - 20),
     };
   };
 
-  const [position, setPosition] = useState<{ x: number; y: number }>(getInitialPosition);
+  const [position, setPosition] = useState<{ x: number; y: number }>(
+    getInitialPosition
+  );
 
   // 실제 렌더링 후 위치 미세 조정
   useEffect(() => {
@@ -85,19 +102,25 @@ export default function HoverToolbar({
     const adjustedY = viewportHeight - rect.height - 20;
 
     // 위치가 많이 다르면 업데이트
-    if (Math.abs(position.x - adjustedX) > 50 || Math.abs(position.y - adjustedY) > 50) {
+    if (
+      Math.abs(position.x - adjustedX) > 50 ||
+      Math.abs(position.y - adjustedY) > 50
+    ) {
       setPosition({ x: Math.max(20, adjustedX), y: Math.max(20, adjustedY) });
     }
   }, [toolbarRef.current, locked]);
 
   // 드래그 핸들러
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    setIsDragging(true);
-    setDragOffset({
-      x: e.clientX - position.x,
-      y: e.clientY - position.y,
-    });
-  }, [position]);
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      setIsDragging(true);
+      setDragOffset({
+        x: e.clientX - position.x,
+        y: e.clientY - position.y,
+      });
+    },
+    [position]
+  );
 
   useEffect(() => {
     if (!isDragging) return;
@@ -113,7 +136,10 @@ export default function HoverToolbar({
       const newY = e.clientY - dragOffset.y;
 
       const clampedX = Math.max(0, Math.min(newX, viewportWidth - rect.width));
-      const clampedY = Math.max(0, Math.min(newY, viewportHeight - rect.height));
+      const clampedY = Math.max(
+        0,
+        Math.min(newY, viewportHeight - rect.height)
+      );
 
       setPosition({ x: clampedX, y: clampedY });
     };
@@ -121,12 +147,15 @@ export default function HoverToolbar({
     const handleMouseUp = () => {
       setIsDragging(false);
       setUserMoved(true);
-      
+
       // 드래그가 끝나면 위치를 localStorage에 저장
       if (toolbarRef.current) {
         const rect = toolbarRef.current.getBoundingClientRect();
         const savedPos = { x: rect.left, y: rect.top };
-        localStorage.setItem('automation-wizard-toolbar-position', JSON.stringify(savedPos));
+        localStorage.setItem(
+          "automation-wizard-toolbar-position",
+          JSON.stringify(savedPos)
+        );
       }
     };
 
@@ -152,8 +181,11 @@ export default function HoverToolbar({
   }, []);
 
   const elementInfo = getElementInfo(target);
-  const hasParent = target.parentElement !== null && target.parentElement !== document.body;
+  const hasParent =
+    target.parentElement !== null && target.parentElement !== document.body;
   const hasChild = target.children.length > 0;
+
+  // selector와 locator는 target이 변경될 때마다 재계산
   const selector = makeSelector(target); // UI 표시용
   const locator = generateRobustLocator(target); // Step 기록용
 
@@ -261,36 +293,44 @@ export default function HoverToolbar({
     async (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      const screenshot = await captureElementScreenshot(target, selector);
+
+      // 최신 target 기반으로 selector와 locator 재계산
+      const currentSelector = makeSelector(target);
+      const currentLocator = generateRobustLocator(target);
+      const screenshot = await captureElementScreenshot(
+        target,
+        currentSelector
+      );
+
       onRecord({
         type: "click",
-        selector, // 하위 호환성
-        locator,  // 새로운 다중 selector 시스템
+        selector: currentSelector, // 하위 호환성
+        locator: currentLocator, // 새로운 다중 selector 시스템
         url: window.location.href,
         screenshot: screenshot || undefined,
       });
     },
-    [target, selector, locator, captureElementScreenshot, onRecord]
+    [target, captureElementScreenshot, onRecord]
   );
 
   const handleScreenshot = useCallback(
     async (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      
+
       const screenshot = await captureElementScreenshot(target, selector);
-      
+
       if (screenshot) {
         // 스크린샷을 다운로드
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = screenshot;
         link.download = `element-screenshot-${Date.now()}.png`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
+
         // 스크린샷 촬영 피드백
-        alert('📸 Screenshot saved!');
+        alert("📸 Screenshot saved!");
       }
     },
     [target, selector, captureElementScreenshot]
@@ -301,20 +341,26 @@ export default function HoverToolbar({
       e.preventDefault();
       e.stopPropagation();
 
+      // 최신 target 기반으로 selector와 locator 재계산
+      const currentSelector = makeSelector(target);
+      const currentLocator = generateRobustLocator(target);
+
       const onTextInput = (text: string | null) => {
         if (text !== null) {
           const maskedDisplayText = "*".repeat(text.length);
-          captureElementScreenshot(target, selector).then((screenshot) => {
-            onRecord({
-              type: "type",
-              selector, // 하위 호환성
-              locator,  // 새로운 다중 selector 시스템
-              text: maskedDisplayText,
-              originalText: text,
-              url: window.location.href,
-              screenshot: screenshot || undefined,
-            });
-          });
+          captureElementScreenshot(target, currentSelector).then(
+            (screenshot) => {
+              onRecord({
+                type: "type",
+                selector: currentSelector, // 하위 호환성
+                locator: currentLocator, // 새로운 다중 selector 시스템
+                text: maskedDisplayText,
+                originalText: text,
+                url: window.location.href,
+                screenshot: screenshot || undefined,
+              });
+            }
+          );
         }
       };
 
@@ -322,11 +368,13 @@ export default function HoverToolbar({
         onShowTextInput(onTextInput);
       } else {
         // Fallback to prompt
-        const text = prompt("입력할 텍스트를 입력하세요 (보안상 마스킹됩니다):");
+        const text = prompt(
+          "입력할 텍스트를 입력하세요 (보안상 마스킹됩니다):"
+        );
         onTextInput(text);
       }
     },
-    [target, selector, locator, captureElementScreenshot, onRecord, onShowTextInput]
+    [target, captureElementScreenshot, onRecord, onShowTextInput]
   );
 
   const handleSelect = useCallback(
@@ -339,6 +387,10 @@ export default function HoverToolbar({
         return;
       }
 
+      // 최신 target 기반으로 selector와 locator 재계산
+      const currentSelector = makeSelector(target);
+      const currentLocator = generateRobustLocator(target);
+
       const options = Array.from(target.options).map((opt, idx) => ({
         index: idx,
         value: opt.value,
@@ -347,16 +399,18 @@ export default function HoverToolbar({
 
       const onSelectOption = (selectedValue: string | null) => {
         if (selectedValue !== null) {
-          captureElementScreenshot(target, selector).then((screenshot) => {
-            onRecord({
-              type: "select",
-              selector, // 하위 호환성
-              locator,  // 새로운 다중 selector 시스템
-              value: selectedValue,
-              url: window.location.href,
-              screenshot: screenshot || undefined,
-            });
-          });
+          captureElementScreenshot(target, currentSelector).then(
+            (screenshot) => {
+              onRecord({
+                type: "select",
+                selector: currentSelector, // 하위 호환성
+                locator: currentLocator, // 새로운 다중 selector 시스템
+                value: selectedValue,
+                url: window.location.href,
+                screenshot: screenshot || undefined,
+              });
+            }
+          );
         }
       };
 
@@ -377,23 +431,31 @@ export default function HoverToolbar({
         }
       }
     },
-    [target, selector, locator, captureElementScreenshot, onRecord, onShowSelectOption]
+    [target, captureElementScreenshot, onRecord, onShowSelectOption]
   );
 
   const handleExtract = useCallback(
     async (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      const screenshot = await captureElementScreenshot(target, selector);
+
+      // 최신 target 기반으로 selector와 locator 재계산
+      const currentSelector = makeSelector(target);
+      const currentLocator = generateRobustLocator(target);
+      const screenshot = await captureElementScreenshot(
+        target,
+        currentSelector
+      );
+
       onRecord({
         type: "extract",
-        selector, // 하위 호환성
-        locator,  // 새로운 다중 selector 시스템
+        selector: currentSelector, // 하위 호환성
+        locator: currentLocator, // 새로운 다중 selector 시스템
         url: window.location.href,
         screenshot: screenshot || undefined,
       });
     },
-    [target, selector, locator, captureElementScreenshot, onRecord]
+    [target, captureElementScreenshot, onRecord]
   );
 
   const handleNavigate = useCallback(
@@ -413,20 +475,25 @@ export default function HoverToolbar({
     async (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
+
+      // 최신 target 기반으로 selector와 locator 재계산
+      const currentSelector = makeSelector(target);
+      const currentLocator = generateRobustLocator(target);
+
       const timeoutStr = prompt("Wait timeout (ms, default: 5000):");
       const timeoutMs = timeoutStr ? parseInt(timeoutStr) : 5000;
-      
+
       if (!isNaN(timeoutMs)) {
         onRecord({
           type: "waitFor",
-          selector, // 하위 호환성
-          locator,  // 새로운 다중 selector 시스템
+          selector: currentSelector, // 하위 호환성
+          locator: currentLocator, // 새로운 다중 selector 시스템
           timeoutMs,
           url: window.location.href,
         });
       }
     },
-    [selector, locator, onRecord]
+    [target, onRecord]
   );
 
   return (
@@ -445,7 +512,8 @@ export default function HoverToolbar({
           ? "0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)"
           : "0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04)",
         zIndex: 2147483647,
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif",
+        fontFamily:
+          "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif",
         fontSize: "13px",
         pointerEvents: "auto",
         cursor: isDragging ? "grabbing" : "grab",
@@ -476,9 +544,13 @@ export default function HoverToolbar({
           >
             Selected Element
           </div>
-          <div style={{ fontSize: "12px", color: "#404040", lineHeight: "1.6" }}>
+          <div
+            style={{ fontSize: "12px", color: "#404040", lineHeight: "1.6" }}
+          >
             <div style={{ marginBottom: "6px" }}>
-              <strong style={{ color: "#1a1a1a", fontWeight: 500 }}>{elementInfo.tagName}</strong>
+              <strong style={{ color: "#1a1a1a", fontWeight: 500 }}>
+                {elementInfo.tagName}
+              </strong>
               {elementInfo.id && (
                 <span style={{ color: "#737373", marginLeft: "6px" }}>
                   {elementInfo.id}
@@ -504,7 +576,7 @@ export default function HoverToolbar({
                 "{elementInfo.text}"
               </div>
             )}
-            
+
             {/* Full Selector */}
             <div
               style={{
@@ -615,7 +687,9 @@ export default function HoverToolbar({
             whiteSpace: "nowrap",
           }}
         >
-          <strong style={{ fontWeight: 500, color: "#1a1a1a" }}>{elementInfo.tagName}</strong>
+          <strong style={{ fontWeight: 500, color: "#1a1a1a" }}>
+            {elementInfo.tagName}
+          </strong>
           <span style={{ marginLeft: "6px" }}>{elementInfo.id}</span>
           <span style={{ marginLeft: "4px" }}>{elementInfo.classes}</span>
         </div>
@@ -623,27 +697,55 @@ export default function HoverToolbar({
 
       {/* Action Buttons */}
       <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-        <ActionButton onClick={handleClick} locked={locked} icon={<MousePointer2 size={14} strokeWidth={2} />}>
+        <ActionButton
+          onClick={handleClick}
+          locked={locked}
+          icon={<MousePointer2 size={14} strokeWidth={2} />}
+        >
           Click
         </ActionButton>
-        <ActionButton onClick={handleScreenshot} locked={locked} icon={<Camera size={14} strokeWidth={2} />}>
+        <ActionButton
+          onClick={handleScreenshot}
+          locked={locked}
+          icon={<Camera size={14} strokeWidth={2} />}
+        >
           Screenshot
         </ActionButton>
-        <ActionButton onClick={handleType} locked={locked} icon={<Keyboard size={14} strokeWidth={2} />}>
+        <ActionButton
+          onClick={handleType}
+          locked={locked}
+          icon={<Keyboard size={14} strokeWidth={2} />}
+        >
           Type
         </ActionButton>
         {target instanceof HTMLSelectElement && (
-          <ActionButton onClick={handleSelect} locked={locked} icon={<ListChecks size={14} strokeWidth={2} />}>
+          <ActionButton
+            onClick={handleSelect}
+            locked={locked}
+            icon={<ListChecks size={14} strokeWidth={2} />}
+          >
             Select
           </ActionButton>
         )}
-        <ActionButton onClick={handleExtract} locked={locked} icon={<Download size={14} strokeWidth={2} />}>
+        <ActionButton
+          onClick={handleExtract}
+          locked={locked}
+          icon={<Download size={14} strokeWidth={2} />}
+        >
           Extract
         </ActionButton>
-        <ActionButton onClick={handleNavigate} locked={locked} icon={<Globe size={14} strokeWidth={2} />}>
+        <ActionButton
+          onClick={handleNavigate}
+          locked={locked}
+          icon={<Globe size={14} strokeWidth={2} />}
+        >
           Navigate
         </ActionButton>
-        <ActionButton onClick={handleWaitFor} locked={locked} icon={<Clock size={14} strokeWidth={2} />}>
+        <ActionButton
+          onClick={handleWaitFor}
+          locked={locked}
+          icon={<Clock size={14} strokeWidth={2} />}
+        >
           Wait
         </ActionButton>
       </div>
@@ -698,4 +800,3 @@ function ActionButton({
     </button>
   );
 }
-
