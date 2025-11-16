@@ -48,6 +48,28 @@ npm run dev
 npm run build
 ```
 
+### 테스트 ✅
+```bash
+# 테스트 실행 (watch 모드)
+pnpm test
+
+# 테스트 1회 실행
+pnpm test:run
+
+# 인터랙티브 UI로 테스트
+pnpm test:ui
+
+# 코드 커버리지 포함
+pnpm test:coverage
+```
+
+**현재 테스트 현황: 11개 파일 / 219개 테스트 - 모두 통과 ✨**
+
+자세한 내용:
+- [TESTING.md](./TESTING.md) - 테스트 작성 가이드
+- [TEST_PLAN.md](./TEST_PLAN.md) - 테스트 플랜
+- [TEST_SUMMARY.md](./TEST_SUMMARY.md) - 테스트 구현 완료 요약
+
 ### Chrome에 로드
 1. Chrome에서 `chrome://extensions` 열기
 2. **개발자 모드** 활성화
@@ -127,11 +149,17 @@ automation-wizard/
 
 ## 🔧 기술 스택
 
+### 프로덕션
 - **WXT**: Chrome Extension 프레임워크
 - **React 19**: UI 라이브러리
 - **TypeScript**: 타입 안정성
 - **Chrome Extensions API**: Manifest V3
 - **Vite**: 번들러 (WXT 내장)
+
+### 개발/테스트
+- **Vitest**: 테스트 프레임워크
+- **Testing Library**: React 컴포넌트 테스트
+- **Happy-DOM**: 브라우저 환경 시뮬레이션
 
 ## 🎯 다음 단계
 
