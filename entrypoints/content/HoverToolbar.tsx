@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { MousePointer2, Keyboard, ListChecks, Download, Globe, Clock, Camera, ChevronUp, ChevronDown } from "lucide-react";
 import type { Step } from "../../types";
 import { makeSelector, generateRobustLocator } from "../../lib/selectors/selectorGenerator";
 
@@ -436,54 +437,55 @@ export default function HoverToolbar({
         position: "fixed",
         left: position.x,
         top: position.y,
-        background: locked ? "#1f2937" : "#2d3748",
-        color: "#f7fafc",
-        padding: locked ? "12px" : "8px",
-        borderRadius: "8px",
+        background: "#ffffff",
+        color: "#1a1a1a",
+        padding: locked ? "16px" : "12px",
+        borderRadius: "12px",
         boxShadow: locked
-          ? "0 4px 16px rgba(245, 158, 11, 0.3)"
-          : "0 2px 8px rgba(0, 0, 0, 0.2)",
+          ? "0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)"
+          : "0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04)",
         zIndex: 2147483647,
-        fontFamily: "system-ui, -apple-system, sans-serif",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif",
         fontSize: "13px",
         pointerEvents: "auto",
         cursor: isDragging ? "grabbing" : "grab",
         userSelect: "none",
         transition: isDragging ? "none" : "all 0.2s ease",
-        border: locked ? "2px solid #f59e0b" : "1px solid #4a5568",
-        minWidth: locked ? "300px" : "auto",
-        maxWidth: locked ? "450px" : "auto",
+        border: locked ? "2px solid #1a1a1a" : "1px solid #e5e5e5",
+        minWidth: locked ? "320px" : "auto",
+        maxWidth: locked ? "480px" : "auto",
       }}
     >
       {/* Element Info (항상 표시, locked일 때 더 상세) */}
       {locked ? (
         <div
           style={{
-            marginBottom: "12px",
-            paddingBottom: "12px",
-            borderBottom: "1px solid #374151",
+            marginBottom: "16px",
+            paddingBottom: "16px",
+            borderBottom: "1px solid #e5e5e5",
           }}
         >
           <div
             style={{
-              fontWeight: "600",
-              marginBottom: "6px",
-              color: "#f59e0b",
-              fontSize: "11px",
+              fontWeight: "500",
+              marginBottom: "10px",
+              color: "#1a1a1a",
+              fontSize: "12px",
+              letterSpacing: "-0.01em",
             }}
           >
-            🔍 SELECTED ELEMENT
+            Selected Element
           </div>
-          <div style={{ fontSize: "11px", color: "#d1d5db", lineHeight: "1.6" }}>
-            <div style={{ marginBottom: "4px" }}>
-              <strong style={{ color: "#f3f4f6" }}>{elementInfo.tagName}</strong>
+          <div style={{ fontSize: "12px", color: "#404040", lineHeight: "1.6" }}>
+            <div style={{ marginBottom: "6px" }}>
+              <strong style={{ color: "#1a1a1a", fontWeight: 500 }}>{elementInfo.tagName}</strong>
               {elementInfo.id && (
-                <span style={{ color: "#60a5fa", marginLeft: "4px" }}>
+                <span style={{ color: "#737373", marginLeft: "6px" }}>
                   {elementInfo.id}
                 </span>
               )}
               {elementInfo.classes && (
-                <span style={{ color: "#34d399", marginLeft: "4px" }}>
+                <span style={{ color: "#737373", marginLeft: "6px" }}>
                   {elementInfo.classes}
                 </span>
               )}
@@ -492,11 +494,11 @@ export default function HoverToolbar({
               <div
                 style={{
                   fontStyle: "italic",
-                  color: "#9ca3af",
+                  color: "#737373",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
-                  marginBottom: "8px",
+                  marginBottom: "10px",
                 }}
               >
                 "{elementInfo.text}"
@@ -506,15 +508,16 @@ export default function HoverToolbar({
             {/* Full Selector */}
             <div
               style={{
-                marginTop: "8px",
-                padding: "8px",
-                background: "#374151",
-                borderRadius: "4px",
-                fontSize: "10px",
-                fontFamily: "monospace",
-                color: "#d1d5db",
+                marginTop: "10px",
+                padding: "10px",
+                background: "#fafafa",
+                border: "1px solid #e5e5e5",
+                borderRadius: "6px",
+                fontSize: "11px",
+                fontFamily: "'SF Mono', 'Monaco', 'Menlo', monospace",
+                color: "#404040",
                 wordBreak: "break-all",
-                lineHeight: "1.4",
+                lineHeight: "1.5",
               }}
             >
               {selector}
@@ -523,19 +526,19 @@ export default function HoverToolbar({
             {/* 키보드 단축키 안내 */}
             <div
               style={{
-                marginTop: "8px",
-                fontSize: "10px",
-                color: "#6b7280",
+                marginTop: "10px",
+                fontSize: "11px",
+                color: "#a3a3a3",
                 textAlign: "center",
               }}
             >
-              ⬆️ ArrowUp | ⬇️ ArrowDown | ESC: Unlock
+              ↑ ArrowUp | ↓ ArrowDown | ESC: Unlock
             </div>
           </div>
 
           {/* 요소 탐색 버튼 */}
           {(onNavigateParent || onNavigateChild) && (
-            <div style={{ display: "flex", gap: "6px", marginTop: "8px" }}>
+            <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
               {onNavigateParent && (
                 <button
                   onClick={(e) => {
@@ -546,18 +549,25 @@ export default function HoverToolbar({
                   disabled={!hasParent}
                   style={{
                     flex: 1,
-                    padding: "6px 10px",
-                    background: hasParent ? "#6366f1" : "#d1d5db",
-                    color: "white",
-                    border: "none",
+                    padding: "8px 12px",
+                    background: hasParent ? "#f5f5f5" : "#fafafa",
+                    color: hasParent ? "#404040" : "#a3a3a3",
+                    border: "1px solid #e5e5e5",
                     borderRadius: "6px",
                     cursor: hasParent ? "pointer" : "not-allowed",
-                    fontSize: "11px",
+                    fontSize: "12px",
                     fontWeight: "500",
-                    transition: "background 0.2s",
+                    transition: "all 0.15s ease",
+                    letterSpacing: "-0.01em",
+                    opacity: hasParent ? 1 : 0.4,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
                   }}
                 >
-                  ⬆️ Parent
+                  <ChevronUp size={14} strokeWidth={2} />
+                  Parent
                 </button>
               )}
               {onNavigateChild && (
@@ -570,18 +580,25 @@ export default function HoverToolbar({
                   disabled={!hasChild}
                   style={{
                     flex: 1,
-                    padding: "6px 10px",
-                    background: hasChild ? "#8b5cf6" : "#d1d5db",
-                    color: "white",
-                    border: "none",
+                    padding: "8px 12px",
+                    background: hasChild ? "#f5f5f5" : "#fafafa",
+                    color: hasChild ? "#404040" : "#a3a3a3",
+                    border: "1px solid #e5e5e5",
                     borderRadius: "6px",
                     cursor: hasChild ? "pointer" : "not-allowed",
-                    fontSize: "11px",
+                    fontSize: "12px",
                     fontWeight: "500",
-                    transition: "background 0.2s",
+                    transition: "all 0.15s ease",
+                    letterSpacing: "-0.01em",
+                    opacity: hasChild ? 1 : 0.4,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
                   }}
                 >
-                  ⬇️ Child
+                  <ChevronDown size={14} strokeWidth={2} />
+                  Child
                 </button>
               )}
             </div>
@@ -590,44 +607,44 @@ export default function HoverToolbar({
       ) : (
         <div
           style={{
-            marginBottom: "8px",
-            fontSize: "11px",
-            color: "#cbd5e0",
+            marginBottom: "10px",
+            fontSize: "12px",
+            color: "#737373",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
           }}
         >
-          <strong>{elementInfo.tagName}</strong>
-          {elementInfo.id}
-          {elementInfo.classes}
-          </div>
-        )}
+          <strong style={{ fontWeight: 500, color: "#1a1a1a" }}>{elementInfo.tagName}</strong>
+          <span style={{ marginLeft: "6px" }}>{elementInfo.id}</span>
+          <span style={{ marginLeft: "4px" }}>{elementInfo.classes}</span>
+        </div>
+      )}
 
       {/* Action Buttons */}
-      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-        <ActionButton onClick={handleClick} locked={locked}>
-          🖱️ Click
+      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+        <ActionButton onClick={handleClick} locked={locked} icon={<MousePointer2 size={14} strokeWidth={2} />}>
+          Click
         </ActionButton>
-        <ActionButton onClick={handleScreenshot} locked={locked}>
-          📸 Screenshot
+        <ActionButton onClick={handleScreenshot} locked={locked} icon={<Camera size={14} strokeWidth={2} />}>
+          Screenshot
         </ActionButton>
-        <ActionButton onClick={handleType} locked={locked}>
-          ⌨️ Type
+        <ActionButton onClick={handleType} locked={locked} icon={<Keyboard size={14} strokeWidth={2} />}>
+          Type
         </ActionButton>
         {target instanceof HTMLSelectElement && (
-          <ActionButton onClick={handleSelect} locked={locked}>
-            📋 Select
+          <ActionButton onClick={handleSelect} locked={locked} icon={<ListChecks size={14} strokeWidth={2} />}>
+            Select
           </ActionButton>
         )}
-        <ActionButton onClick={handleExtract} locked={locked}>
-          📤 Extract
+        <ActionButton onClick={handleExtract} locked={locked} icon={<Download size={14} strokeWidth={2} />}>
+          Extract
         </ActionButton>
-        <ActionButton onClick={handleNavigate} locked={locked}>
-          🔗 Navigate
+        <ActionButton onClick={handleNavigate} locked={locked} icon={<Globe size={14} strokeWidth={2} />}>
+          Navigate
         </ActionButton>
-        <ActionButton onClick={handleWaitFor} locked={locked}>
-          ⏱️ Wait
+        <ActionButton onClick={handleWaitFor} locked={locked} icon={<Clock size={14} strokeWidth={2} />}>
+          Wait
         </ActionButton>
       </div>
     </div>
@@ -641,26 +658,16 @@ function ActionButton({
   onClick,
   locked,
   disabled = false,
+  icon,
   children,
 }: {
   onClick: (e: React.MouseEvent) => void;
   locked: boolean;
   disabled?: boolean;
+  icon?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const [hover, setHover] = useState(false);
-
-  const getButtonColor = () => {
-    const childText = typeof children === 'string' ? children : '';
-    if (childText.includes('Click')) return hover ? '#2563eb' : '#3b82f6';
-    if (childText.includes('Screenshot')) return hover ? '#c026d3' : '#d946ef';
-    if (childText.includes('Type')) return hover ? '#059669' : '#10b981';
-    if (childText.includes('Select')) return hover ? '#db2777' : '#ec4899';
-    if (childText.includes('Extract')) return hover ? '#d97706' : '#f59e0b';
-    if (childText.includes('Navigate')) return hover ? '#0284c7' : '#0ea5e9';
-    if (childText.includes('Wait')) return hover ? '#7c3aed' : '#8b5cf6';
-    return hover ? '#2563eb' : '#3b82f6';
-  };
 
   return (
     <button
@@ -669,18 +676,24 @@ function ActionButton({
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        padding: "6px 12px",
-        background: disabled ? "#d1d5db" : getButtonColor(),
-        color: "white",
-        border: "none",
+        padding: "8px 14px",
+        background: disabled ? "#fafafa" : hover ? "#f5f5f5" : "#ffffff",
+        color: disabled ? "#a3a3a3" : "#1a1a1a",
+        border: "1px solid #e5e5e5",
         borderRadius: "6px",
         cursor: disabled ? "not-allowed" : "pointer",
-        fontSize: "12px",
+        fontSize: "13px",
         fontWeight: "500",
-        transition: "all 0.2s",
+        transition: "all 0.15s ease",
         whiteSpace: "nowrap",
+        letterSpacing: "-0.01em",
+        opacity: disabled ? 0.4 : 1,
+        display: "flex",
+        alignItems: "center",
+        gap: "6px",
       }}
     >
+      {icon}
       {children}
     </button>
   );

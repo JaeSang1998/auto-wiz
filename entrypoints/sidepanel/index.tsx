@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import ReactDOM from "react-dom/client";
+import { Wand2, Undo } from "lucide-react";
 import type { Flow, FlowUpdatedMessage, SentOkMessage } from "../../types";
 import { useFlowExecution } from "../../hooks/useFlowExecution";
 import { getFlow, saveFlow, clearFlow, removeStep } from "../../lib/storage/flowStorage";
@@ -244,16 +245,19 @@ function SidePanelApp() {
       {/* Header */}
       <div
         style={{
-          padding: "16px",
-          background: "#3b82f6",
-          color: "white",
-          borderBottom: "1px solid #2563eb",
+          padding: "24px 20px",
+          background: "#ffffff",
+          color: "#1a1a1a",
+          borderBottom: "1px solid #e5e5e5",
         }}
       >
-        <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 700 }}>
-          🧙‍♂️ Automation Wizard
-        </h2>
-        <p style={{ margin: "4px 0 0 0", fontSize: "12px", opacity: 0.9 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+          <Wand2 size={20} strokeWidth={2} />
+          <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 600, letterSpacing: "-0.02em" }}>
+            Automation Wizard
+          </h2>
+        </div>
+        <p style={{ margin: "0", fontSize: "13px", color: "#737373" }}>
           Record and replay browser automation flows
         </p>
       </div>
@@ -262,12 +266,12 @@ function SidePanelApp() {
       {(statusMessage || sendStatus) && (
         <div
           style={{
-            padding: "12px 16px",
-            background: "#dbeafe",
-            border: "1px solid #3b82f6",
-            color: "#1e40af",
-            fontSize: "12px",
-            fontWeight: 600,
+            padding: "12px 20px",
+            background: "#fafafa",
+            borderBottom: "1px solid #e5e5e5",
+            color: "#404040",
+            fontSize: "13px",
+            fontWeight: 500,
           }}
         >
           {statusMessage || sendStatus}
@@ -293,18 +297,19 @@ function SidePanelApp() {
       {/* Flow Info */}
       <div
         style={{
-          padding: "12px 16px",
-          background: "#f3f4f6",
-          borderBottom: "1px solid #e5e7eb",
-          fontSize: "12px",
-          color: "#6b7280",
+          padding: "14px 20px",
+          background: "#fafafa",
+          borderBottom: "1px solid #e5e5e5",
+          fontSize: "13px",
+          color: "#737373",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
         }}
       >
         <div>
-          <strong>Steps:</strong> {flow?.steps.length || 0}
+          <strong style={{ color: "#1a1a1a", fontWeight: 500 }}>Steps:</strong>{" "}
+          <span style={{ color: "#404040" }}>{flow?.steps.length || 0}</span>
         </div>
         {startUrl && (
           <div
@@ -315,7 +320,8 @@ function SidePanelApp() {
               whiteSpace: "nowrap",
             }}
           >
-            <strong>Start URL:</strong> {startUrl}
+            <strong style={{ color: "#1a1a1a", fontWeight: 500 }}>Start URL:</strong>{" "}
+            <span style={{ color: "#737373" }}>{startUrl}</span>
           </div>
         )}
       </div>
@@ -325,22 +331,21 @@ function SidePanelApp() {
         style={{
           flex: 1,
           overflowY: "auto",
-          padding: "16px",
+          padding: "20px",
         }}
       >
         {!hasSteps ? (
           <div
             style={{
               textAlign: "center",
-              padding: "40px 20px",
-              color: "#9ca3af",
+              padding: "60px 20px",
+              color: "#a3a3a3",
             }}
           >
-            <div style={{ fontSize: "48px", marginBottom: "16px" }}>📝</div>
-            <h3 style={{ margin: "0 0 8px 0", fontSize: "16px" }}>
+            <h3 style={{ margin: "0 0 8px 0", fontSize: "15px", fontWeight: 500, color: "#404040" }}>
               No steps recorded yet
             </h3>
-            <p style={{ margin: 0, fontSize: "13px" }}>
+            <p style={{ margin: 0, fontSize: "13px", color: "#737373", lineHeight: "1.6" }}>
               Turn on the picker and start recording your automation flow
             </p>
           </div>
@@ -369,11 +374,11 @@ function SidePanelApp() {
       {hasSteps && (
         <div
           style={{
-            padding: "12px 16px",
-            background: "#f9fafb",
-            borderTop: "1px solid #e5e7eb",
+            padding: "16px 20px",
+            background: "#fafafa",
+            borderTop: "1px solid #e5e5e5",
             display: "flex",
-            gap: "8px",
+            gap: "10px",
           }}
         >
           <button
@@ -381,18 +386,23 @@ function SidePanelApp() {
             disabled={recording || isRunning}
             style={{
               flex: 1,
-              padding: "8px",
-              background:
-                recording || isRunning ? "#d1d5db" : "#6b7280",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
+              padding: "10px",
+              background: recording || isRunning ? "#fafafa" : "#f5f5f5",
+              color: recording || isRunning ? "#a3a3a3" : "#404040",
+              border: "1px solid #e5e5e5",
+              borderRadius: "8px",
               cursor: recording || isRunning ? "not-allowed" : "pointer",
-              fontSize: "12px",
-              fontWeight: 600,
+              fontSize: "13px",
+              fontWeight: 500,
+              opacity: recording || isRunning ? 0.4 : 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
             }}
           >
-            ↩️ Undo Last
+            <Undo size={16} strokeWidth={2} />
+            Undo Last
           </button>
 
           <div style={{ flex: 2 }}>
@@ -403,10 +413,12 @@ function SidePanelApp() {
               onChange={(e) => setEndpoint(e.target.value)}
               style={{
                 width: "100%",
-                padding: "8px",
-                border: "1px solid #d1d5db",
-                borderRadius: "6px",
-                fontSize: "12px",
+                padding: "10px 12px",
+                border: "1px solid #e5e5e5",
+                borderRadius: "8px",
+                fontSize: "13px",
+                background: "#ffffff",
+                color: "#1a1a1a",
               }}
             />
           </div>

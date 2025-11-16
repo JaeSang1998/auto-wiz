@@ -1,4 +1,5 @@
 import React from "react";
+import { Target, Circle, Square, Play, Pause, Undo, Trash2, Send } from "lucide-react";
 
 interface FlowControlsProps {
   recording: boolean;
@@ -35,29 +36,36 @@ export function FlowControls({
   return (
     <div
       style={{
-        padding: "16px",
-        background: "#f9fafb",
-        borderBottom: "1px solid #e5e7eb",
+        padding: "20px",
+        background: "#ffffff",
+        borderBottom: "1px solid #e5e5e5",
       }}
     >
       {/* Main Action Buttons */}
-      <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+      <div style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
         <button
           onClick={onTogglePicker}
           style={{
             flex: 1,
-            padding: "10px",
-            background: pickerOn ? "#10b981" : "#6b7280",
-            color: "white",
-            border: "none",
-            borderRadius: "6px",
+            padding: "11px 16px",
+            background: pickerOn ? "#1a1a1a" : "#f5f5f5",
+            color: pickerOn ? "#ffffff" : "#404040",
+            border: "1px solid #e5e5e5",
+            borderRadius: "8px",
             cursor: "pointer",
             fontSize: "13px",
-            fontWeight: 600,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            fontWeight: 500,
+            boxShadow: "none",
+            letterSpacing: "-0.01em",
+            transition: "all 0.15s ease",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
           }}
         >
-          {pickerOn ? "🎯 Picker ON" : "🎯 Turn ON Picker"}
+          <Target size={16} strokeWidth={2} />
+          {pickerOn ? "Picker Active" : "Enable Picker"}
         </button>
 
         {recording ? (
@@ -65,60 +73,78 @@ export function FlowControls({
             onClick={onStopRecording}
             style={{
               flex: 1,
-              padding: "10px",
-              background: "#ef4444",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
+              padding: "11px 16px",
+              background: "#1a1a1a",
+              color: "#ffffff",
+              border: "1px solid #1a1a1a",
+              borderRadius: "8px",
               cursor: "pointer",
               fontSize: "13px",
-              fontWeight: 600,
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              fontWeight: 500,
+              boxShadow: "none",
+              letterSpacing: "-0.01em",
               animation: "pulse 1.5s ease-in-out infinite",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
             }}
           >
-            ⏹️ Stop Recording
+            <Square size={16} strokeWidth={2} fill="currentColor" />
+            Stop Recording
           </button>
         ) : (
           <button
             onClick={onStartRecording}
             style={{
               flex: 1,
-              padding: "10px",
-              background: "#dc2626",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
+              padding: "11px 16px",
+              background: "#1a1a1a",
+              color: "#ffffff",
+              border: "1px solid #1a1a1a",
+              borderRadius: "8px",
               cursor: "pointer",
               fontSize: "13px",
-              fontWeight: 600,
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              fontWeight: 500,
+              boxShadow: "none",
+              letterSpacing: "-0.01em",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
             }}
           >
-            ⏺️ Start Recording
+            <Circle size={16} strokeWidth={2} fill="currentColor" />
+            Start Recording
           </button>
         )}
       </div>
 
       {/* Flow Action Buttons */}
-      <div style={{ display: "flex", gap: "8px" }}>
+      <div style={{ display: "flex", gap: "10px" }}>
         {isRunning ? (
           <button
             onClick={onStop}
             style={{
               flex: 1,
-              padding: "10px",
-              background: "#f59e0b",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
+              padding: "11px 16px",
+              background: "#ffffff",
+              color: "#1a1a1a",
+              border: "1px solid #e5e5e5",
+              borderRadius: "8px",
               cursor: "pointer",
               fontSize: "13px",
-              fontWeight: 600,
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              fontWeight: 500,
+              boxShadow: "none",
+              letterSpacing: "-0.01em",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
             }}
           >
-            ⏸️ Stop Flow
+            <Pause size={16} strokeWidth={2} />
+            Stop Flow
           </button>
         ) : (
           <button
@@ -126,18 +152,25 @@ export function FlowControls({
             disabled={!hasSteps}
             style={{
               flex: 1,
-              padding: "10px",
-              background: hasSteps ? "#3b82f6" : "#9ca3af",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
+              padding: "11px 16px",
+              background: hasSteps ? "#1a1a1a" : "#fafafa",
+              color: hasSteps ? "#ffffff" : "#a3a3a3",
+              border: "1px solid #e5e5e5",
+              borderRadius: "8px",
               cursor: hasSteps ? "pointer" : "not-allowed",
               fontSize: "13px",
-              fontWeight: 600,
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              fontWeight: 500,
+              boxShadow: "none",
+              letterSpacing: "-0.01em",
+              opacity: hasSteps ? 1 : 0.4,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
             }}
           >
-            ▶️ Run Flow
+            <Play size={16} strokeWidth={2} fill={hasSteps ? "currentColor" : "none"} />
+            Run Flow
           </button>
         )}
 
@@ -145,56 +178,75 @@ export function FlowControls({
           onClick={onUndo}
           disabled={!hasSteps || isRunning}
           style={{
-            padding: "10px 16px",
-            background: !hasSteps || isRunning ? "#d1d5db" : "#6b7280",
-            color: "white",
-            border: "none",
-            borderRadius: "6px",
+            padding: "11px 16px",
+            background: !hasSteps || isRunning ? "#fafafa" : "#f5f5f5",
+            color: !hasSteps || isRunning ? "#a3a3a3" : "#404040",
+            border: "1px solid #e5e5e5",
+            borderRadius: "8px",
             cursor: !hasSteps || isRunning ? "not-allowed" : "pointer",
             fontSize: "13px",
-            fontWeight: 600,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            fontWeight: 500,
+            boxShadow: "none",
+            letterSpacing: "-0.01em",
+            opacity: !hasSteps || isRunning ? 0.4 : 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
           }}
         >
-          ↩️ Undo
+          <Undo size={16} strokeWidth={2} />
+          Undo
         </button>
 
         <button
           onClick={onClear}
           disabled={!hasSteps || recording || isRunning}
           style={{
-            padding: "10px 16px",
-            background:
-              !hasSteps || recording || isRunning ? "#d1d5db" : "#ef4444",
-            color: "white",
-            border: "none",
-            borderRadius: "6px",
-            cursor:
-              !hasSteps || recording || isRunning ? "not-allowed" : "pointer",
+            padding: "11px 16px",
+            background: !hasSteps || recording || isRunning ? "#fafafa" : "#ffffff",
+            color: !hasSteps || recording || isRunning ? "#a3a3a3" : "#dc2626",
+            border: "1px solid #e5e5e5",
+            borderRadius: "8px",
+            cursor: !hasSteps || recording || isRunning ? "not-allowed" : "pointer",
             fontSize: "13px",
-            fontWeight: 600,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            fontWeight: 500,
+            boxShadow: "none",
+            letterSpacing: "-0.01em",
+            opacity: !hasSteps || recording || isRunning ? 0.4 : 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
           }}
         >
-          🗑️ Clear
+          <Trash2 size={16} strokeWidth={2} />
+          Clear
         </button>
 
         <button
           onClick={onSendToBackend}
           disabled={!hasSteps || isRunning}
           style={{
-            padding: "10px 16px",
-            background: !hasSteps || isRunning ? "#d1d5db" : "#8b5cf6",
-            color: "white",
-            border: "none",
-            borderRadius: "6px",
+            padding: "11px 16px",
+            background: !hasSteps || isRunning ? "#fafafa" : "#f5f5f5",
+            color: !hasSteps || isRunning ? "#a3a3a3" : "#404040",
+            border: "1px solid #e5e5e5",
+            borderRadius: "8px",
             cursor: !hasSteps || isRunning ? "not-allowed" : "pointer",
             fontSize: "13px",
-            fontWeight: 600,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            fontWeight: 500,
+            boxShadow: "none",
+            letterSpacing: "-0.01em",
+            opacity: !hasSteps || isRunning ? 0.4 : 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
           }}
         >
-          📤 Send
+          <Send size={16} strokeWidth={2} />
+          Send
         </button>
       </div>
 

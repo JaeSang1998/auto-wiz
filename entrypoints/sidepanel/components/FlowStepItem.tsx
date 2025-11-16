@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { MousePointer2, Keyboard, ListChecks, Download, Globe, Clock, GripVertical, X } from "lucide-react";
 import type { Step } from "../../../types";
 
 interface FlowStepItemProps {
@@ -63,21 +64,41 @@ export function FlowStepItem({
   };
 
   const getStepIcon = (type: Step["type"]) => {
+    const iconProps = { size: 14, strokeWidth: 2 };
     switch (type) {
       case "click":
-        return "🖱️";
+        return <MousePointer2 {...iconProps} />;
       case "type":
-        return "⌨️";
+        return <Keyboard {...iconProps} />;
       case "select":
-        return "📋";
+        return <ListChecks {...iconProps} />;
       case "extract":
-        return "📤";
+        return <Download {...iconProps} />;
       case "navigate":
-        return "🔗";
+        return <Globe {...iconProps} />;
       case "waitFor":
-        return "⏱️";
+        return <Clock {...iconProps} />;
       default:
-        return "❓";
+        return null;
+    }
+  };
+
+  const getStepLabel = (type: Step["type"]) => {
+    switch (type) {
+      case "click":
+        return "Click";
+      case "type":
+        return "Type";
+      case "select":
+        return "Select";
+      case "extract":
+        return "Extract";
+      case "navigate":
+        return "Navigate";
+      case "waitFor":
+        return "Wait";
+      default:
+        return "Action";
     }
   };
 
@@ -111,25 +132,26 @@ export function FlowStepItem({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       style={{
-        padding: "12px",
+        padding: "16px",
         background: isDragging
-          ? "#e0e7ff"
+          ? "#fafafa"
           : isDragOver
-          ? "#fef3c7"
+          ? "#f5f5f5"
           : isExecuting
-          ? "#fef3c7"
+          ? "#fafafa"
           : isCompleted
-          ? "#d1fae5"
-          : "#f9fafb",
+          ? "#f5f5f5"
+          : "#ffffff",
+        border: "1px solid #e5e5e5",
         borderLeft: isDragOver
-          ? "3px solid #3b82f6"
+          ? "3px solid #1a1a1a"
           : isExecuting
-          ? "3px solid #f59e0b"
+          ? "3px solid #737373"
           : isCompleted
-          ? "3px solid #10b981"
-          : "3px solid #e5e7eb",
-        borderRadius: "6px",
-        marginBottom: "8px",
+          ? "3px solid #404040"
+          : "1px solid #e5e5e5",
+        borderRadius: "8px",
+        marginBottom: "10px",
         transition: "all 0.2s ease",
         cursor: onReorder ? "move" : "default",
         opacity: isDragging ? 0.5 : 1,
@@ -141,87 +163,99 @@ export function FlowStepItem({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "4px",
+          marginBottom: "8px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           {onReorder && (
             <span
               style={{
-                fontSize: "14px",
                 cursor: "grab",
-                color: "#9ca3af",
+                color: "#d4d4d4",
+                lineHeight: 1,
+                display: "flex",
+                alignItems: "center",
               }}
               title="Drag to reorder"
             >
-              ⋮⋮
+              <GripVertical size={16} strokeWidth={2} />
             </span>
           )}
-          <span style={{ fontSize: "16px" }}>{getStepIcon(step.type)}</span>
           <span
             style={{
-              fontSize: "11px",
-              fontWeight: 600,
-              color: "#6b7280",
+              fontSize: "12px",
+              fontWeight: 500,
+              color: "#a3a3a3",
+              letterSpacing: "-0.01em",
             }}
           >
-            Step {index + 1}
+            {index + 1}
           </span>
           <span
             style={{
-              fontSize: "11px",
-              padding: "2px 6px",
-              background: "#e5e7eb",
-              borderRadius: "4px",
-              fontWeight: 600,
+              fontSize: "12px",
+              padding: "4px 10px",
+              background: "#fafafa",
+              border: "1px solid #e5e5e5",
+              borderRadius: "6px",
+              fontWeight: 500,
+              color: "#404040",
+              letterSpacing: "-0.01em",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
             }}
           >
-            {step.type}
+            {getStepIcon(step.type)}
+            {getStepLabel(step.type)}
           </span>
           {isExecuting && (
             <span
               style={{
-                fontSize: "11px",
-                padding: "2px 6px",
-                background: "#fbbf24",
-                color: "#78350f",
-                borderRadius: "4px",
-                fontWeight: 600,
+                fontSize: "12px",
+                padding: "4px 10px",
+                background: "#1a1a1a",
+                color: "#ffffff",
+                borderRadius: "6px",
+                fontWeight: 500,
+                letterSpacing: "-0.01em",
               }}
             >
-              Running...
+              Running
             </span>
           )}
           {isCompleted && (
             <span
               style={{
-                fontSize: "11px",
-                padding: "2px 6px",
-                background: "#10b981",
-                color: "white",
-                borderRadius: "4px",
-                fontWeight: 600,
+                fontSize: "12px",
+                padding: "4px 10px",
+                background: "#404040",
+                color: "#ffffff",
+                borderRadius: "6px",
+                fontWeight: 500,
+                letterSpacing: "-0.01em",
               }}
             >
-              ✓ Done
+              Done
             </span>
           )}
         </div>
 
         {/* Action Buttons */}
-        <div style={{ display: "flex", gap: "4px" }}>
+        <div style={{ display: "flex", gap: "6px" }}>
           {onEdit && (
             <button
               onClick={() => onEdit(index)}
               style={{
-                padding: "4px 8px",
-                background: "#3b82f6",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
+                padding: "6px 12px",
+                background: "#f5f5f5",
+                color: "#404040",
+                border: "1px solid #e5e5e5",
+                borderRadius: "6px",
                 cursor: "pointer",
-                fontSize: "11px",
-                fontWeight: 600,
+                fontSize: "12px",
+                fontWeight: 500,
+                letterSpacing: "-0.01em",
               }}
             >
               Edit
@@ -230,16 +264,21 @@ export function FlowStepItem({
           <button
             onClick={() => onRemove(index)}
             style={{
-              padding: "4px 8px",
-              background: "#ef4444",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
+              padding: "6px 12px",
+              background: "#ffffff",
+              color: "#dc2626",
+              border: "1px solid #e5e5e5",
+              borderRadius: "6px",
               cursor: "pointer",
-              fontSize: "11px",
-              fontWeight: 600,
+              fontSize: "12px",
+              fontWeight: 500,
+              letterSpacing: "-0.01em",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
             }}
           >
+            <X size={14} strokeWidth={2} />
             Remove
           </button>
         </div>
@@ -248,10 +287,11 @@ export function FlowStepItem({
       {/* Step Description */}
       <div
         style={{
-          fontSize: "12px",
-          color: "#374151",
-          marginBottom: extractedData || screenshot ? "8px" : "0",
+          fontSize: "13px",
+          color: "#404040",
+          marginBottom: extractedData || screenshot ? "12px" : "0",
           wordBreak: "break-word",
+          lineHeight: "1.5",
         }}
       >
         {getStepDescription(step)}
@@ -261,29 +301,31 @@ export function FlowStepItem({
       {extractedData !== undefined && (
         <div
           style={{
-            marginTop: "8px",
-            padding: "8px",
-            background: "#dbeafe",
-            borderRadius: "4px",
-            fontSize: "11px",
-            color: "#1e40af",
-            fontFamily: "monospace",
+            marginTop: "12px",
+            padding: "12px",
+            background: "#fafafa",
+            border: "1px solid #e5e5e5",
+            borderRadius: "6px",
+            fontSize: "12px",
+            color: "#404040",
+            fontFamily: "'SF Mono', 'Monaco', 'Menlo', monospace",
+            lineHeight: "1.6",
           }}
         >
-          <strong>Extracted:</strong> {JSON.stringify(extractedData)}
+          <strong style={{ fontWeight: 500 }}>Extracted:</strong> {JSON.stringify(extractedData)}
         </div>
       )}
 
       {/* Screenshot */}
       {screenshot && (
-        <div style={{ marginTop: "8px" }}>
+        <div style={{ marginTop: "12px" }}>
           <img
             src={screenshot.screenshot}
             alt="Element screenshot"
             style={{
               maxWidth: "100%",
-              borderRadius: "4px",
-              border: "1px solid #e5e7eb",
+              borderRadius: "6px",
+              border: "1px solid #e5e5e5",
             }}
           />
         </div>

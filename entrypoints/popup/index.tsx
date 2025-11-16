@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
+import { Wand2, PanelRightOpen } from "lucide-react";
 
 function PopupApp() {
   const [statusMessage, setStatusMessage] = useState("");
@@ -27,36 +28,40 @@ function PopupApp() {
   return (
     <div
       style={{
-        fontFamily: "system-ui, -apple-system, sans-serif",
-        padding: "8px",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif",
+        padding: "16px",
         minHeight: "auto",
-        background: "#f9fafb",
+        background: "#ffffff",
         display: "flex",
         flexDirection: "column",
-        gap: "8px",
+        gap: "12px",
         width: "300px",
       }}
     >
-      <h2
-        style={{
-          fontSize: "14px",
-          fontWeight: 700,
-          marginBottom: "2px",
-          color: "#111827",
-        }}
-      >
-        🧙‍♂️ Automation Wizard
-      </h2>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "2px" }}>
+        <Wand2 size={18} strokeWidth={2} />
+        <h2
+          style={{
+            fontSize: "16px",
+            fontWeight: 600,
+            margin: 0,
+            color: "#1a1a1a",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Automation Wizard
+        </h2>
+      </div>
 
       {statusMessage && (
         <div
           style={{
-            padding: "8px 12px",
-            background: "#dbeafe",
-            border: "1px solid #3b82f6",
-            borderRadius: "6px",
+            padding: "10px 14px",
+            background: "#fafafa",
+            border: "1px solid #e5e5e5",
+            borderRadius: "8px",
             fontSize: "13px",
-            color: "#1e40af",
+            color: "#404040",
           }}
         >
           {statusMessage}
@@ -66,18 +71,24 @@ function PopupApp() {
       <button
         onClick={handleToggleSidePanel}
         style={{
-          padding: "6px 10px",
-          background: sidePanelOpen ? "#10b981" : "#6b7280",
-          color: "white",
-          border: "none",
-          borderRadius: "6px",
+          padding: "11px 16px",
+          background: sidePanelOpen ? "#1a1a1a" : "#f5f5f5",
+          color: sidePanelOpen ? "#ffffff" : "#404040",
+          border: "1px solid #e5e5e5",
+          borderRadius: "8px",
           cursor: "pointer",
-          fontSize: "12px",
-          fontWeight: 600,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+          fontSize: "13px",
+          fontWeight: 500,
+          boxShadow: "none",
+          letterSpacing: "-0.01em",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "8px",
         }}
       >
-        {sidePanelOpen ? "📱 Side Panel ON" : "📱 Open Side Panel"}
+        <PanelRightOpen size={16} strokeWidth={2} />
+        {sidePanelOpen ? "Side Panel Active" : "Open Side Panel"}
       </button>
     </div>
   );

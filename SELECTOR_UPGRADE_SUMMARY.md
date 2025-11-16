@@ -193,3 +193,4 @@ const element = await findByLocator(step.locator);
 **테스트 통과율:** 99.7%
 **상태:** ✅ Production Ready
 
+

@@ -1,54 +1,59 @@
 /* Highlight box */
 .wxt-highlight-box {
   position: absolute;
-  border: 2px solid #5b9;
+  border: 2px solid #1a1a1a;
   pointer-events: none;
   z-index: 2147483647;
   box-sizing: border-box;
-  background: rgba(85, 187, 153, 0.1);
+  background: rgba(26, 26, 26, 0.05);
   transition: all 0.1s ease;
 }
 
 /* Hover toolbar */
 .wxt-toolbar {
   position: fixed;
-  padding: 8px;
+  padding: 12px;
   z-index: 2147483647;
   background: #ffffff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 12px;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  font-size: 13px;
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
 }
 
 .wxt-toolbar button {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 4px;
-  background: #5b9;
-  color: white;
+  padding: 8px 14px;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1a1a1a;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
-  transition: background 0.2s;
+  transition: all 0.15s ease;
+  letter-spacing: -0.01em;
 }
 
 .wxt-toolbar button:hover {
-  background: #4a8;
+  background: #fafafa;
+  border-color: #d4d4d4;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
 .wxt-toolbar button:active {
-  transform: scale(0.95);
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 .wxt-toolbar-divider {
   width: 1px;
-  height: 20px;
-  background: #ddd;
+  height: 24px;
+  background: #e5e5e5;
 }
 
 
