@@ -23,6 +23,7 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "@automation-wizard/core": "workspace:*",
+    "@automation-wizard/dom": "workspace:*",
     "@automation-wizard/ui": "workspace:*"
   },
   "devDependencies": {

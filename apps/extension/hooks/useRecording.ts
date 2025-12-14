@@ -1,6 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { Step } from "@automation-wizard/core";
-import { getSimpleSelector, generateRobustLocator } from "@automation-wizard/core";
+import {
+  getSimpleSelector,
+  generateRobustLocator,
+} from "@automation-wizard/dom";
 
 interface UseRecordingOptions {
   autoCapture?: boolean;
@@ -14,7 +17,7 @@ interface UseRecordingReturn {
 
 /**
  * 녹화 로직을 처리하는 커스텀 훅
- * 
+ *
  * 기능:
  * - 클릭, 타이핑, 선택(select) 이벤트 자동 캡처
  * - 타이핑 디바운스 (500ms)
@@ -26,7 +29,7 @@ export function useRecording({
   autoCapture = true,
 }: UseRecordingOptions = {}): UseRecordingReturn {
   const [recording, setRecording] = useState(false);
-  
+
   // 타이핑 상태 관리 (ref로 최신 값 유지)
   const typingTimerRef = useRef<number | null>(null);
   const typingSelectorRef = useRef<string | null>(null);
@@ -55,16 +58,18 @@ export function useRecording({
 
     const value = typingValueRef.current ?? "";
     const masked = value ? "*".repeat(value.length) : "";
-    
+
     // 요소를 찾아서 locator 생성
     let locator;
     try {
-      const element = document.querySelector(typingSelectorRef.current) as HTMLElement;
+      const element = document.querySelector(
+        typingSelectorRef.current
+      ) as HTMLElement;
       if (element) {
         locator = generateRobustLocator(element);
       }
     } catch {}
-    
+
     const step: Step = {
       type: "type",
       selector: typingSelectorRef.current, // 하위 호환성
@@ -86,63 +91,60 @@ export function useRecording({
   /**
    * 클릭 이벤트 핸들러
    */
-  const handleClick = useCallback(
-    (e: MouseEvent) => {
-      if (!recordingRef.current) return;
+  const handleClick = useCallback((e: MouseEvent) => {
+    if (!recordingRef.current) return;
 
-      const el = e.target as HTMLElement | null;
-      if (!el) return;
+    const el = e.target as HTMLElement | null;
+    if (!el) return;
 
-      // 우리 툴바나 루트 클릭은 무시
-      if (el.closest("#automation-wizard-root")) return;
+    // 우리 툴바나 루트 클릭은 무시
+    if (el.closest("#automation-wizard-root")) return;
 
-      // 링크 클릭 - 새 탭 열림을 same-tab 네비로 강제
-      const linkEl = (el.closest &&
-        el.closest("a[href]")) as HTMLAnchorElement | null;
-      
-      if (linkEl && linkEl.href) {
-        const isMiddleClick = e.button === 1;
-        const isModifierOpen = e.metaKey === true || e.ctrlKey === true;
-        const opensNewTab =
-          linkEl.target === "_blank" || isMiddleClick || isModifierOpen;
+    // 링크 클릭 - 새 탭 열림을 same-tab 네비로 강제
+    const linkEl = (el.closest &&
+      el.closest("a[href]")) as HTMLAnchorElement | null;
 
-        if (opensNewTab) {
-          try {
-            e.preventDefault();
-            e.stopPropagation();
-          } catch {}
+    if (linkEl && linkEl.href) {
+      const isMiddleClick = e.button === 1;
+      const isModifierOpen = e.metaKey === true || e.ctrlKey === true;
+      const opensNewTab =
+        linkEl.target === "_blank" || isMiddleClick || isModifierOpen;
 
-          try {
-            window.location.href = linkEl.href;
-          } catch {}
+      if (opensNewTab) {
+        try {
+          e.preventDefault();
+          e.stopPropagation();
+        } catch {}
 
-          const navStep: Step = { type: "navigate", url: linkEl.href };
-          browser.runtime
-            .sendMessage({ type: "REC_STEP", step: navStep })
-            .catch(() => {});
-          return;
-        }
+        try {
+          window.location.href = linkEl.href;
+        } catch {}
+
+        const navStep: Step = { type: "navigate", url: linkEl.href };
+        browser.runtime
+          .sendMessage({ type: "REC_STEP", step: navStep })
+          .catch(() => {});
+        return;
       }
+    }
 
-      // select 요소나 그 option 클릭은 무시 (change/input 이벤트에서 처리)
-      const tag = el.tagName?.toLowerCase();
-      if (tag === "select" || tag === "option") return;
-      if (el.closest("select")) return;
+    // select 요소나 그 option 클릭은 무시 (change/input 이벤트에서 처리)
+    const tag = el.tagName?.toLowerCase();
+    if (tag === "select" || tag === "option") return;
+    if (el.closest("select")) return;
 
-      const selector = getSimpleSelector(el);
-      const locator = generateRobustLocator(el);
-      
-      const step: Step = {
-        type: "click",
-        selector, // 하위 호환성
-        locator,  // 새로운 다중 selector 시스템
-        url: window.location.href,
-      };
+    const selector = getSimpleSelector(el);
+    const locator = generateRobustLocator(el);
 
-      browser.runtime.sendMessage({ type: "REC_STEP", step }).catch(() => {});
-    },
-    []
-  );
+    const step: Step = {
+      type: "click",
+      selector, // 하위 호환성
+      locator, // 새로운 다중 selector 시스템
+      url: window.location.href,
+    };
+
+    browser.runtime.sendMessage({ type: "REC_STEP", step }).catch(() => {});
+  }, []);
 
   /**
    * Input 이벤트 핸들러 (타이핑, Select)
@@ -170,7 +172,7 @@ export function useRecording({
         const step: Step = {
           type: "select",
           selector, // 하위 호환성
-          locator,  // 새로운 다중 selector 시스템
+          locator, // 새로운 다중 selector 시스템
           value,
           url: window.location.href,
         };
@@ -325,7 +327,7 @@ export function useRecording({
       const step: Step = {
         type: "select",
         selector, // 하위 호환성
-        locator,  // 새로운 다중 selector 시스템
+        locator, // 새로운 다중 selector 시스템
         value,
         url: window.location.href,
       };
@@ -421,4 +423,3 @@ export function useRecording({
     stopRecording,
   };
 }
-

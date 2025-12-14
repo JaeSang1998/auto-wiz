@@ -4,15 +4,15 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { 
+import {
   executeStep,
   executeClickStep,
   executeTypeStep,
   executeSelectStep,
   executeExtractStep,
   executeWaitForStep,
-  generateRobustLocator
-} from "@automation-wizard/core";
+  generateRobustLocator,
+} from "@automation-wizard/dom";
 import { Step } from "@automation-wizard/core";
 
 describe("Step Execution with Locator Integration", () => {
@@ -481,4 +481,3 @@ describe("Step Execution with Locator Integration", () => {
     });
   });
 });
-

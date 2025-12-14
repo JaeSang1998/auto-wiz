@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import type { Flow, Step } from "@automation-wizard/core";
-import { executeStep } from "@automation-wizard/core";
+import { executeStep } from "@automation-wizard/dom";
 
 /**
  * Step 실행 로직 테스트
- * 
+ *
  * executeScript 내부에서 실행되는 각 Step 타입의 로직을 테스트합니다.
  */
 
@@ -92,7 +92,7 @@ describe("Step Execution Logic", () => {
       // Note: isInteractable implementation might rely on getComputedStyle which happy-dom supports partially
       // If happy-dom doesn't support full visibility check, we might need to rely on the implementation detail or mock it.
       // However, stepExecution.ts imports isInteractable from locatorUtils.
-      
+
       const step: Step = {
         type: "click",
         selector: "#hidden-button",
@@ -104,7 +104,7 @@ describe("Step Execution Logic", () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain("not interactable");
     });
-    
+
     it("should fail if element is disabled", async () => {
       const button = document.createElement("button");
       button.id = "disabled-button";
@@ -529,4 +529,3 @@ describe("Step Execution Logic", () => {
     });
   });
 });
-

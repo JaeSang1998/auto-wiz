@@ -12,7 +12,7 @@ import {
   findByLocator,
   findByText,
   findByLabelText,
-} from "@automation-wizard/core"; // Note: locatorUtils might not be exported from core index.ts yet? I should check.
+} from "@automation-wizard/dom"; // Note: locatorUtils might not be exported from core index.ts yet? I should check.
 import type { ElementLocator } from "@automation-wizard/core";
 
 describe("Locator Edge Cases", () => {

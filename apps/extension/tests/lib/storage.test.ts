@@ -51,7 +51,7 @@ describe("Flow Storage (Memory Adapter)", () => {
 
   it("should add steps", async () => {
     await addStep(mockStep);
-    
+
     const flow = await getFlow();
     expect(flow?.steps).toHaveLength(1);
     expect(flow?.steps[0]).toEqual(mockStep);
@@ -64,7 +64,7 @@ describe("Flow Storage (Memory Adapter)", () => {
   it("should remove last step", async () => {
     await addStep(mockStep);
     await addStep({ ...mockStep, type: "type", text: "hello" } as any);
-    
+
     let flow = await getFlow();
     expect(flow?.steps).toHaveLength(2);
 
@@ -76,7 +76,11 @@ describe("Flow Storage (Memory Adapter)", () => {
 
   it("should remove specific step", async () => {
     const step1 = { ...mockStep, type: "click" } as Step;
-    const step2 = { ...mockStep, type: "type", text: "hello" } as unknown as Step;
+    const step2 = {
+      ...mockStep,
+      type: "type",
+      text: "hello",
+    } as unknown as Step;
     const step3 = { ...mockStep, type: "wait" } as unknown as Step;
 
     await addStep(step1);
@@ -94,7 +98,7 @@ describe("Flow Storage (Memory Adapter)", () => {
 
   it("should update specific step", async () => {
     await addStep(mockStep);
-    
+
     const updatedStep = { ...mockStep, selector: "updated" };
     await updateStep(0, updatedStep);
 
@@ -111,7 +115,7 @@ describe("Flow Storage (Memory Adapter)", () => {
 
   it("should set startUrl on first step if present", async () => {
     const stepWithUrl = { ...mockStep, url: "https://example.com" };
-    
+
     // Clear first (implicit in beforeEach but explicitly ensure fresh state)
     await clearFlow();
     const cleanFlow = await getFlow();

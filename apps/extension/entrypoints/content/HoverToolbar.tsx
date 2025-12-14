@@ -11,7 +11,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import type { Step } from "@automation-wizard/core";
-import { makeSelector, generateRobustLocator } from "@automation-wizard/core";
+import { makeSelector, generateRobustLocator } from "@automation-wizard/dom";
 
 interface HoverToolbarProps {
   x: number;

@@ -14,7 +14,7 @@ import {
   findByText,
   isInteractable,
   waitForLocator,
-} from "@automation-wizard/core";
+} from "@automation-wizard/dom";
 import type { ElementLocator } from "@automation-wizard/core";
 
 describe("generateRobustLocator", () => {
