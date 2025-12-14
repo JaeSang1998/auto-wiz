@@ -1,6 +1,18 @@
 {
   "name": "@automation-wizard/ui",
   "version": "1.0.0",
+  "license": "MIT",
+  "author": "JaeSang",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JaeSang1998/automation-wizard.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
