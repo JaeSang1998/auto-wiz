@@ -70,9 +70,9 @@ browser.runtime.onMessage.addListener((msg: Message, sender, sendResponse) => {
 
       // Sidepanel에도 상태 브로드캐스트
       try {
-        await browser.runtime.sendMessage({ 
-          type: "RECORD_STATE", 
-          recording: true 
+        await browser.runtime.sendMessage({
+          type: "RECORD_STATE",
+          recording: true,
         });
       } catch (e) {
         // Sidepanel이 열려있지 않으면 에러 발생 - 무시
@@ -123,9 +123,9 @@ browser.runtime.onMessage.addListener((msg: Message, sender, sendResponse) => {
 
       // Sidepanel에도 상태 브로드캐스트
       try {
-        await browser.runtime.sendMessage({ 
-          type: "RECORD_STATE", 
-          recording: false 
+        await browser.runtime.sendMessage({
+          type: "RECORD_STATE",
+          recording: false,
         });
       } catch (e) {
         // Sidepanel이 열려있지 않으면 에러 발생 - 무시
@@ -222,13 +222,19 @@ browser.runtime.onMessage.addListener((msg: Message, sender, sendResponse) => {
             : undefined;
         if (typeof firstUrl === "string" && firstUrl.startsWith("http")) {
           console.log(`Navigating to first step URL: ${firstUrl}`);
-          await browser.tabs.update(targetTabId, { url: firstUrl, active: true });
+          await browser.tabs.update(targetTabId, {
+            url: firstUrl,
+            active: true,
+          });
           await waitForTabLoaded(targetTabId);
           await new Promise((resolve) => setTimeout(resolve, 800));
         } else if (flow.startUrl) {
           // fallback: startUrl이 있으면 사용
           console.log(`Navigating to startUrl: ${flow.startUrl}`);
-          await browser.tabs.update(targetTabId, { url: flow.startUrl, active: true });
+          await browser.tabs.update(targetTabId, {
+            url: flow.startUrl,
+            active: true,
+          });
           await waitForTabLoaded(targetTabId);
           await new Promise((resolve) => setTimeout(resolve, 800));
         }
@@ -397,7 +403,7 @@ async function runFlowInTab(tabId: number, flow: Flow): Promise<void> {
           // URL이 다르면 네비게이션 (origin + pathname 비교)
           const stepUrlPath = stepUrl.origin + stepUrl.pathname;
           const currentUrlPath = currentUrlObj.origin + currentUrlObj.pathname;
-          
+
           if (stepUrlPath !== currentUrlPath) {
             console.log(
               `URL mismatch: expected ${stepUrlPath}, got ${currentUrlPath}`
@@ -438,442 +444,60 @@ async function runFlowInTab(tabId: number, flow: Flow): Promise<void> {
         continue;
       }
 
-      const execTarget: any = { tabId } as { tabId: number; frameIds?: number[] };
-      if ((step as any)._frameId !== undefined) {
-        execTarget.frameIds = [(step as any)._frameId as number];
-      }
-      const result = await browser.scripting.executeScript({
-        target: execTarget,
-        func: async (stepToRun: Step) => {
-          function querySelector(sel: string): Element | null {
-            return document.querySelector(sel);
+      // -----------------------------------------------------------------------
+      // Delegate execution to content script via messaging (DomFlowRunner)
+      // -----------------------------------------------------------------------
+      console.log("Sending EXECUTE_STEP to content script", step);
+
+      const donePromise = new Promise<void>((resolve, reject) => {
+        const listener = (m: any) => {
+          // Check for completion of THIS specific step
+          if (m.type === "STEP_COMPLETED" && m.stepIndex === i) {
+            browser.runtime.onMessage.removeListener(listener);
+            if (m.success) {
+              // Extract data handling
+              if (m.extractedData) {
+                console.log("Step extracted data:", m.extractedData);
+              }
+              resolve();
+            } else {
+              reject(new Error(m.error || "Step failed"));
+            }
           }
-
-          async function scrollIntoViewCentered(el: Element) {
-            try {
-              (el as HTMLElement).scrollIntoView({
-                block: "center",
-                inline: "center",
-                behavior: "smooth",
-              });
-              await new Promise((r) => setTimeout(r, 200));
-            } catch {}
+          // Fail-safe for flow failure
+          if (m.type === "FLOW_FAILED") {
+            browser.runtime.onMessage.removeListener(listener);
+            reject(new Error(m.error));
           }
+        };
+        browser.runtime.onMessage.addListener(listener);
 
-          switch (stepToRun.type) {
-            case "waitFor": {
-              const timeout = stepToRun.timeoutMs ?? 5000;
-              if (!stepToRun.selector && !stepToRun.locator) {
-                 await new Promise((resolve) => setTimeout(resolve, timeout));
-                 return;
-              }
-
-              const deadline = Date.now() + timeout;
-              return new Promise<void>((resolve, reject) => {
-                const interval = setInterval(async () => {
-                  const selector = stepToRun.selector || "";
-                  if (!selector) {
-                    clearInterval(interval);
-                    resolve();
-                    return;
-                  }
-                  
-                  const el = querySelector(selector);
-                  if (el) {
-                    clearInterval(interval);
-                    await scrollIntoViewCentered(el);
-                    resolve();
-                  } else if (Date.now() > deadline) {
-                    clearInterval(interval);
-                    reject(new Error("waitFor timeout: " + selector));
-                  }
-                }, 150);
-              });
-            }
-
-            case "click": {
-              const el = querySelector(
-                stepToRun.selector
-              ) as HTMLElement | null;
-              if (!el)
-                throw new Error("Element not found: " + stepToRun.selector);
-              await scrollIntoViewCentered(el);
-              el.click();
-              return { success: true, type: "click" };
-            }
-
-            case "type": {
-              const el = querySelector(stepToRun.selector) as
-                | HTMLInputElement
-                | HTMLTextAreaElement
-                | null;
-              if (!el)
-                throw new Error("Element not found: " + stepToRun.selector);
-
-              // 보안을 위해 원본 텍스트 사용 (마스킹되지 않은)
-              const text =
-                (stepToRun as any).originalText ||
-                (stepToRun as any).text ||
-                "";
-
-              await scrollIntoViewCentered(el);
-              // 요소에 포커스 및 클릭 (더 확실한 포커스)
-              el.focus();
-              el.click();
-
-              // 포커스 확인을 위한 짧은 대기
-              await new Promise((resolve) => setTimeout(resolve, 100));
-
-              // 기존 값 클리어 (더 확실하게)
-              el.select();
-              el.value = "";
-
-              // 실제 사용자 입력처럼 한 글자씩 타이핑
-              for (let i = 0; i < text.length; i++) {
-                const char = text[i];
-
-                // 값 업데이트
-                el.value += char;
-
-                // 커서를 끝으로 이동
-                el.setSelectionRange(el.value.length, el.value.length);
-
-                // 각 문자마다 완전한 키보드 이벤트 시퀀스
-                const keydownEvent = new KeyboardEvent("keydown", {
-                  key: char,
-                  code: `Key${char.toUpperCase()}`,
-                  keyCode: char.charCodeAt(0),
-                  which: char.charCodeAt(0),
-                  bubbles: true,
-                  cancelable: true,
-                });
-
-                const keypressEvent = new KeyboardEvent("keypress", {
-                  key: char,
-                  code: `Key${char.toUpperCase()}`,
-                  keyCode: char.charCodeAt(0),
-                  which: char.charCodeAt(0),
-                  bubbles: true,
-                  cancelable: true,
-                });
-
-                const inputEvent = new Event("input", {
-                  bubbles: true,
-                  cancelable: true,
-                });
-
-                const keyupEvent = new KeyboardEvent("keyup", {
-                  key: char,
-                  code: `Key${char.toUpperCase()}`,
-                  keyCode: char.charCodeAt(0),
-                  which: char.charCodeAt(0),
-                  bubbles: true,
-                  cancelable: true,
-                });
-
-                // 이벤트 순서대로 트리거
-                el.dispatchEvent(keydownEvent);
-                el.dispatchEvent(keypressEvent);
-                el.dispatchEvent(inputEvent);
-                el.dispatchEvent(keyupEvent);
-
-                // 타이핑 간격 (사람처럼)
-                await new Promise((resolve) =>
-                  setTimeout(resolve, 80 + Math.random() * 40)
-                );
-              }
-
-              // 최종 이벤트들
-              el.dispatchEvent(
-                new Event("change", { bubbles: true, cancelable: true })
-              );
-              el.dispatchEvent(
-                new Event("blur", { bubbles: true, cancelable: true })
-              );
-
-              // 요청된 경우 Enter 제출 처리
-              if ((stepToRun as any).submit) {
-                const enterDown = new KeyboardEvent("keydown", {
-                  key: "Enter",
-                  code: "Enter",
-                  keyCode: 13,
-                  which: 13,
-                  bubbles: true,
-                  cancelable: true,
-                });
-                const enterPress = new KeyboardEvent("keypress", {
-                  key: "Enter",
-                  code: "Enter",
-                  keyCode: 13,
-                  which: 13,
-                  bubbles: true,
-                  cancelable: true,
-                });
-                const enterUp = new KeyboardEvent("keyup", {
-                  key: "Enter",
-                  code: "Enter",
-                  keyCode: 13,
-                  which: 13,
-                  bubbles: true,
-                  cancelable: true,
-                });
-                el.dispatchEvent(enterDown);
-                el.dispatchEvent(enterPress);
-                el.dispatchEvent(enterUp);
-                // form이 있으면 submit 시도
-                const form = el.form;
-                if (form) {
-                  try {
-                    form.requestSubmit ? form.requestSubmit() : form.submit();
-                  } catch {}
-                }
-                await new Promise((resolve) => setTimeout(resolve, 200));
-              }
-
-              return { success: true, type: "type", value: el.value };
-            }
-
-            case "screenshot": {
-              const el = querySelector(stepToRun.selector) as any;
-              if (!el)
-                throw new Error("Element not found: " + stepToRun.selector);
-              await scrollIntoViewCentered(el);
-              try {
-                const rect = el.getBoundingClientRect();
-                if (rect.width === 0 || rect.height === 0) {
-                  return { success: true, type: "screenshot", value: null };
-                }
-                const canvas = document.createElement("canvas");
-                const ctx = canvas.getContext("2d");
-                if (!ctx) return { success: true, type: "screenshot", value: null };
-                canvas.width = Math.max(rect.width, 200);
-                canvas.height = Math.max(rect.height, 100);
-                ctx.fillStyle = "#f8fafc";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.strokeStyle = "#e2e8f0";
-                ctx.lineWidth = 2;
-                ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
-                ctx.fillStyle = "#1e293b";
-                ctx.font = "bold 14px system-ui";
-                ctx.textAlign = "center";
-                ctx.fillText(el.tagName.toUpperCase(), canvas.width / 2, canvas.height / 2);
-                const screenshotData = {
-                  type: "ELEMENT_SCREENSHOT",
-                  stepIndex: -1,
-                  screenshot: canvas.toDataURL("image/png"),
-                  elementInfo: {
-                    tagName: el.tagName.toLowerCase(),
-                    selector: (stepToRun as any).selector,
-                    text:
-                      el.innerText?.substring(0, 100) ||
-                      el.textContent?.substring(0, 100) ||
-                      "",
-                  },
-                };
-                browser.runtime.sendMessage(screenshotData).catch(() => {});
-              } catch {}
-              return { success: true, type: "screenshot" };
-            }
-
-            case "select": {
-              const el = querySelector(
-                stepToRun.selector
-              ) as HTMLSelectElement | null;
-              if (!el)
-                throw new Error("Element not found: " + stepToRun.selector);
-
-              if (el.tagName.toLowerCase() !== "select") {
-                throw new Error(
-                  "Element is not a select element: " + stepToRun.selector
-                );
-              }
-
-              await scrollIntoViewCentered(el);
-              const selectValue = (stepToRun as any).value;
-
-              // value로 매칭 시도
-              let optionFound = false;
-              for (let i = 0; i < el.options.length; i++) {
-                if (el.options[i].value === selectValue) {
-                  el.selectedIndex = i;
-                  optionFound = true;
-                  break;
-                }
-              }
-
-              // value로 못 찾으면 text로 매칭 시도
-              if (!optionFound) {
-                for (let i = 0; i < el.options.length; i++) {
-                  if (el.options[i].text === selectValue) {
-                    el.selectedIndex = i;
-                    optionFound = true;
-                    break;
-                  }
-                }
-              }
-
-              if (!optionFound) {
-                throw new Error(`Option not found: ${selectValue}`);
-              }
-
-              // change 이벤트 발생
-              el.dispatchEvent(
-                new Event("change", { bubbles: true, cancelable: true })
-              );
-              el.dispatchEvent(
-                new Event("input", { bubbles: true, cancelable: true })
-              );
-
-              return { success: true, type: "select", value: el.value };
-            }
-
-            case "extract": {
-              const el = querySelector(stepToRun.selector) as any;
-              if (!el)
-                throw new Error("Element not found: " + stepToRun.selector);
-
-              await scrollIntoViewCentered(el);
-              const prop = stepToRun.prop ?? "innerText";
-              const value = el[prop];
-
-              console.log("Extracted value:", value);
-
-              // 엘리먼트 스크린샷 촬영
-              try {
-                const rect = el.getBoundingClientRect();
-
-                // 엘리먼트가 화면에 보이는지 확인
-                if (rect.width === 0 || rect.height === 0) {
-                  console.log(
-                    "Element has no visible size, skipping screenshot"
-                  );
-                  return { success: true, type: "extract", value };
-                }
-
-                // 간단한 스크린샷 생성 (실제 DOM을 캡처하는 대신 시각적 표현)
-                const canvas = document.createElement("canvas");
-                const ctx = canvas.getContext("2d");
-
-                if (!ctx) {
-                  console.warn("Failed to get canvas context");
-                  return { success: true, type: "extract", value };
-                }
-
-                // 캔버스 크기 설정 (최소 크기 보장)
-                canvas.width = Math.max(rect.width, 200);
-                canvas.height = Math.max(rect.height, 100);
-
-                // 배경 그리기
-                ctx.fillStyle = "#f8fafc";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                // 테두리 그리기
-                ctx.strokeStyle = "#e2e8f0";
-                ctx.lineWidth = 2;
-                ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
-
-                // 엘리먼트 정보 그리기
-                ctx.fillStyle = "#1e293b";
-                ctx.font = "bold 14px system-ui";
-                ctx.textAlign = "center";
-                ctx.fillText(
-                  el.tagName.toUpperCase(),
-                  canvas.width / 2,
-                  canvas.height / 2 - 10
-                );
-
-                // 텍스트 내용 표시
-                const text =
-                  el.innerText?.substring(0, 30) ||
-                  el.textContent?.substring(0, 30) ||
-                  "";
-                if (text) {
-                  ctx.fillStyle = "#64748b";
-                  ctx.font = "12px system-ui";
-                  ctx.fillText(
-                    text + (text.length >= 30 ? "..." : ""),
-                    canvas.width / 2,
-                    canvas.height / 2 + 10
-                  );
-                }
-
-                // 선택자 정보 표시
-                ctx.fillStyle = "#8b5cf6";
-                ctx.font = "10px monospace";
-                ctx.fillText(
-                  stepToRun.selector.substring(0, 40) +
-                    (stepToRun.selector.length > 40 ? "..." : ""),
-                  canvas.width / 2,
-                  canvas.height - 10
-                );
-
-                // 엘리먼트 스타일 정보 수집
-                const elementInfo = {
-                  tagName: el.tagName.toLowerCase(),
-                  selector: stepToRun.selector,
-                  text:
-                    el.innerText?.substring(0, 100) ||
-                    el.textContent?.substring(0, 100) ||
-                    "",
-                };
-
-                // 스크린샷 데이터를 메시지로 전송
-                const screenshotData = {
-                  type: "ELEMENT_SCREENSHOT",
-                  stepIndex: i, // 루프 인덱스 사용
-                  screenshot: canvas.toDataURL("image/png"),
-                  elementInfo,
-                };
-
-                console.log("Screenshot captured for step", i);
-                browser.runtime.sendMessage(screenshotData).catch(() => {});
-              } catch (screenshotError) {
-                console.warn(
-                  "Failed to capture element screenshot:",
-                  screenshotError
-                );
-              }
-
-              return { success: true, type: "extract", value };
-            }
-
-            default:
-              throw new Error("Unknown step type");
-          }
-        },
-        args: [step],
-        world: "MAIN",
-      });
-
-      // 스텝 완료 알림 (extract 결과 포함)
-      const completedMessage: StepCompletedMessage = {
-        type: "STEP_COMPLETED",
-        step: stepWithUrl,
-        stepIndex: i,
-        success: true,
-      };
-
-      // extract 액션인 경우 추출된 데이터 포함
-      if (step.type === "extract" && result && result[0]) {
-        const resultData = result[0] as any;
-        console.log("Extract result data:", resultData);
-
-        // executeScript의 결과는 { result: { ... } } 형태일 수 있음
-        if (resultData.result && resultData.result.value !== undefined) {
-          completedMessage.extractedData = resultData.result.value;
-          console.log(
-            "Extracted data (from result.result.value):",
-            resultData.result.value
+        // Timeout safety - timeout + buffer
+        const timeoutMs = (step as any).timeoutMs || 5000;
+        setTimeout(() => {
+          browser.runtime.onMessage.removeListener(listener);
+          // Don't reject immediately on timeout here if we want to rely on the runner's internal timeout?
+          // The runner (DomFlowRunner) in content.tsx has its own timeout logic for waitFor/etc.
+          // But if the message is never sent (e.g. content script crash), we need this.
+          reject(
+            new Error(
+              "Timeout waiting for step completion response from content script"
+            )
           );
-        } else if (resultData.value !== undefined) {
-          completedMessage.extractedData = resultData.value;
-          console.log("Extracted data (from result.value):", resultData.value);
-        }
-      }
-
-      browser.runtime.sendMessage(completedMessage).catch(() => {
-        // 사이드패널이 열려있지 않으면 에러 발생 - 무시
+        }, timeoutMs + 2000);
       });
+
+      // Trigger execution
+      await browser.tabs.sendMessage(tabId, {
+        type: "EXECUTE_STEP",
+        step,
+        stepIndex: i,
+      });
+
+      // Wait for completion message
+      await donePromise;
+
+      console.log(`Step ${i + 1} completed successfully via content script`);
 
       // 스텝 간 부드러운 딜레이 (500ms로 증가)
       console.log(`Waiting 500ms before next step...`);

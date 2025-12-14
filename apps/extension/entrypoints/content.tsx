@@ -4,6 +4,10 @@ import HoverToolbar from "./content/HoverToolbar";
 import type { Step, TogglePickerMessage } from "@automation-wizard/core";
 import { useRecording } from "../hooks/useRecording";
 import { useElementInspector } from "../hooks/useElementInspector";
+import { DomFlowRunner } from "@automation-wizard/dom";
+import type { StepExecutingMessage } from "@automation-wizard/core";
+
+const runner = new DomFlowRunner();
 
 function ContentApp() {
   // Picker 상태
@@ -207,6 +211,21 @@ function ContentApp() {
           setLockedTarget(null);
           setInspectedElement(null);
         }
+      } else if (msg.type === "EXECUTE_STEP") {
+        // Execute step request from background
+        const step = msg.step;
+        runner.runStep(step).then((result) => {
+          browser.runtime
+            .sendMessage({
+              type: "STEP_COMPLETED",
+              step,
+              stepIndex: msg.stepIndex,
+              success: result.success,
+              error: result.error,
+              extractedData: result.extractedData,
+            })
+            .catch(() => {});
+        });
       }
     };
 
