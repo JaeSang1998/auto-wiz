@@ -29,6 +29,7 @@ type CoreStep =
       locator?: ElementLocator;  // 새로운 다중 selector 시스템
       url?: string; 
       screenshot?: string;
+      timeoutMs?: number;
     }
   | {
       type: "type";
@@ -39,6 +40,7 @@ type CoreStep =
       submit?: boolean; // 입력 후 Enter 제출 여부
       url?: string;
       screenshot?: string;
+      timeoutMs?: number;
     }
   | {
       type: "select";
@@ -47,6 +49,7 @@ type CoreStep =
       value: string; // 선택할 옵션의 value 또는 text
       url?: string;
       screenshot?: string;
+      timeoutMs?: number;
     }
   | {
       type: "extract";
@@ -55,10 +58,11 @@ type CoreStep =
       prop?: "innerText" | "value";
       url?: string;
       screenshot?: string;
+      timeoutMs?: number;
     }
   | {
       type: "waitFor";
-      selector: string;  // deprecated: 하위 호환성을 위해 유지
+      selector?: string;  // deprecated: 하위 호환성을 위해 유지
       locator?: ElementLocator;
       timeoutMs?: number;
       url?: string;
@@ -70,6 +74,7 @@ type CoreStep =
       locator?: ElementLocator;
       url?: string;
       screenshot: string;
+      timeoutMs?: number;
     }
   | { type: "navigate"; url: string }
   | { type: "waitForNavigation"; timeoutMs?: number };

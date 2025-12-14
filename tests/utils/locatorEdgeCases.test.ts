@@ -424,7 +424,7 @@ describe("Locator Edge Cases", () => {
         </svg>
       `;
 
-      const circle = container.querySelector("circle") as HTMLElement;
+      const circle = container.querySelector("circle") as unknown as HTMLElement;
       const locator = generateRobustLocator(circle);
 
       expect(locator.primary).toBe('[data-testid="circle"]');

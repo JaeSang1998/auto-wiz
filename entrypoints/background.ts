@@ -462,17 +462,30 @@ async function runFlowInTab(tabId: number, flow: Flow): Promise<void> {
 
           switch (stepToRun.type) {
             case "waitFor": {
-              const deadline = Date.now() + (stepToRun.timeoutMs ?? 5000);
+              const timeout = stepToRun.timeoutMs ?? 5000;
+              if (!stepToRun.selector && !stepToRun.locator) {
+                 await new Promise((resolve) => setTimeout(resolve, timeout));
+                 return;
+              }
+
+              const deadline = Date.now() + timeout;
               return new Promise<void>((resolve, reject) => {
                 const interval = setInterval(async () => {
-                  const el = querySelector(stepToRun.selector);
+                  const selector = stepToRun.selector || "";
+                  if (!selector) {
+                    clearInterval(interval);
+                    resolve();
+                    return;
+                  }
+                  
+                  const el = querySelector(selector);
                   if (el) {
                     clearInterval(interval);
                     await scrollIntoViewCentered(el);
                     resolve();
                   } else if (Date.now() > deadline) {
                     clearInterval(interval);
-                    reject(new Error("waitFor timeout: " + stepToRun.selector));
+                    reject(new Error("waitFor timeout: " + selector));
                   }
                 }, 150);
               });

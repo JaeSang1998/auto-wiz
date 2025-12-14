@@ -29,7 +29,7 @@ async function findElement(step: Step): Promise<{
   if ("locator" in step && step.locator) {
     try {
       const element = await waitForLocator(step.locator, {
-        timeout: 5000,
+        timeout: (step as any).timeoutMs || 5000,
         visible: true,
         interactable: true,
       });

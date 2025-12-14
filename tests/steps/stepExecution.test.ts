@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import type { Step } from "../../types";
+import { executeStep } from "../../lib/steps/stepExecution";
 
 /**
  * Step 실행 로직 테스트
@@ -81,9 +82,49 @@ describe("Step Execution Logic", () => {
       expect(clicked).toBe(true);
     });
 
-    it("should trigger click event listeners", () => {
-      let clickCount = 0;
+    it("should fail if element is not interactable (hidden)", async () => {
+      const button = document.createElement("button");
+      button.id = "hidden-button";
+      button.style.display = "none"; // Make it hidden
+      document.body.appendChild(button);
 
+      // Mock isInteractable to return false for hidden elements
+      // Note: isInteractable implementation might rely on getComputedStyle which happy-dom supports partially
+      // If happy-dom doesn't support full visibility check, we might need to rely on the implementation detail or mock it.
+      // However, stepExecution.ts imports isInteractable from locatorUtils.
+      
+      const step: Step = {
+        type: "click",
+        selector: "#hidden-button",
+        locator: { primary: "#hidden-button", fallbacks: [] },
+        timeoutMs: 100,
+      };
+
+      const result = await executeStep(step);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("not interactable");
+    });
+    
+    it("should fail if element is disabled", async () => {
+      const button = document.createElement("button");
+      button.id = "disabled-button";
+      button.disabled = true;
+      document.body.appendChild(button);
+
+      const step: Step = {
+        type: "click",
+        selector: "#disabled-button",
+        locator: { primary: "#disabled-button", fallbacks: [] },
+        timeoutMs: 100,
+      };
+
+      const result = await executeStep(step);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("not interactable");
+    });
+
+    it("should trigger click event listeners", async () => {
+      let clickCount = 0;
       const button = document.createElement("button");
       button.id = "test-button";
       button.addEventListener("click", () => {
@@ -91,11 +132,15 @@ describe("Step Execution Logic", () => {
       });
       document.body.appendChild(button);
 
-      const element = document.getElementById("test-button") as HTMLElement;
-      element.click();
-      element.click();
+      const step: Step = {
+        type: "click",
+        selector: "#test-button",
+        locator: { primary: "#test-button", fallbacks: [] },
+      };
 
-      expect(clickCount).toBe(2);
+      const result = await executeStep(step);
+      expect(result.success).toBe(true);
+      expect(clickCount).toBe(1);
     });
   });
 

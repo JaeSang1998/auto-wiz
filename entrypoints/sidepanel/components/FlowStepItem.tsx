@@ -1,5 +1,16 @@
-import React, { useState } from "react";
-import { MousePointer2, Keyboard, ListChecks, Download, Globe, Clock, X, Shield, ShieldAlert, ChevronUp, ChevronDown } from "lucide-react";
+import {
+  MousePointer2,
+  Keyboard,
+  ListChecks,
+  Download,
+  Globe,
+  Clock,
+  X,
+  Shield,
+  ShieldAlert,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
 import type { Step } from "../../../types";
 
 interface FlowStepItemProps {
@@ -32,7 +43,6 @@ export function FlowStepItem({
   onMoveDown,
   totalSteps = 0,
 }: FlowStepItemProps) {
-
   const getStepIcon = (type: Step["type"]) => {
     const iconProps = { size: 16, strokeWidth: 2 };
     switch (type) {
@@ -115,7 +125,11 @@ export function FlowStepItem({
     // 요소 타입 정보
     if (metadata.role) {
       parts.push(metadata.role);
-    } else if (metadata.tagName && metadata.tagName !== "div" && metadata.tagName !== "span") {
+    } else if (
+      metadata.tagName &&
+      metadata.tagName !== "div" &&
+      metadata.tagName !== "span"
+    ) {
       parts.push(metadata.tagName);
     }
 
@@ -124,13 +138,15 @@ export function FlowStepItem({
       parts.push(`[${metadata.testId}]`);
     }
 
-    return parts.length > 0 ? parts.join(" ") : simplifySelector("selector" in step ? step.selector : "");
+    return parts.length > 0
+      ? parts.join(" ")
+      : simplifySelector("selector" in step ? step.selector : "");
   };
 
   /**
    * Selector를 간략하게 표시 (ID나 class만 추출)
    */
-  const simplifySelector = (selector: string): string => {
+  const simplifySelector = (selector?: string): string => {
     if (!selector) return "element";
 
     // ID selector
@@ -171,16 +187,22 @@ export function FlowStepItem({
         return elementDesc ? `Click ${elementDesc}` : "Click element";
       case "type":
         const textToShow = step.text || step.originalText || "";
-        const displayText = textToShow.length > 30 ? textToShow.substring(0, 30) + "..." : textToShow;
-        return `Type "${displayText}"${elementDesc ? ` into ${elementDesc}` : ""}${
-          step.submit ? " ⏎" : ""
-        }`;
+        const displayText =
+          textToShow.length > 30
+            ? textToShow.substring(0, 30) + "..."
+            : textToShow;
+        return `Type "${displayText}"${
+          elementDesc ? ` into ${elementDesc}` : ""
+        }${step.submit ? " ⏎" : ""}`;
       case "select":
-        return `Select "${step.value}"${elementDesc ? ` from ${elementDesc}` : ""}`;
+        return `Select "${step.value}"${
+          elementDesc ? ` from ${elementDesc}` : ""
+        }`;
       case "extract":
         return elementDesc ? `Extract from ${elementDesc}` : "Extract data";
       case "navigate":
-        const url = step.url.length > 50 ? step.url.substring(0, 50) + "..." : step.url;
+        const url =
+          step.url.length > 50 ? step.url.substring(0, 50) + "..." : step.url;
         return `Navigate to ${url}`;
       case "waitFor":
         if (step.selector) {
@@ -201,7 +223,7 @@ export function FlowStepItem({
     }
 
     const locator = "locator" in step ? step.locator : undefined;
-    
+
     if (!locator) {
       return "low"; // locator가 없으면 낮음
     }
@@ -247,7 +269,7 @@ export function FlowStepItem({
         </span>
       );
     }
-    
+
     if (reliability === "low") {
       return (
         <span
@@ -284,7 +306,11 @@ export function FlowStepItem({
           ? "3px solid #737373"
           : "3px solid transparent",
         paddingLeft: "12px",
-        background: isExecuting ? "#fafafa" : isCompleted ? "#f9f9f9" : "transparent",
+        background: isExecuting
+          ? "#fafafa"
+          : isCompleted
+          ? "#f9f9f9"
+          : "transparent",
         transition: "all 0.15s ease",
       }}
     >
@@ -354,9 +380,17 @@ export function FlowStepItem({
               Done
             </span>
           )}
-          
+
           {/* 우측 버튼 그룹: 이동 + 삭제 */}
-          <div style={{ display: "flex", gap: "4px", marginLeft: "auto", alignItems: "center", paddingRight: "12px" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "4px",
+              marginLeft: "auto",
+              alignItems: "center",
+              paddingRight: "12px",
+            }}
+          >
             {(onMoveUp || onMoveDown) && (
               <>
                 <button
@@ -385,7 +419,8 @@ export function FlowStepItem({
                     background: "transparent",
                     color: index === totalSteps - 1 ? "#d4d4d4" : "#737373",
                     border: "none",
-                    cursor: index === totalSteps - 1 ? "not-allowed" : "pointer",
+                    cursor:
+                      index === totalSteps - 1 ? "not-allowed" : "pointer",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -447,7 +482,8 @@ export function FlowStepItem({
             lineHeight: "1.6",
           }}
         >
-          <strong style={{ fontWeight: 500 }}>Extracted:</strong> {JSON.stringify(extractedData)}
+          <strong style={{ fontWeight: 500 }}>Extracted:</strong>{" "}
+          {JSON.stringify(extractedData)}
         </div>
       )}
 
@@ -468,4 +504,3 @@ export function FlowStepItem({
     </div>
   );
 }
-
