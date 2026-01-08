@@ -371,6 +371,34 @@ Text
       expect(result.extractedData).toContain('<span>');
       expect(result.extractedData).toContain('Text');
     });
+
+    it("should remove base64 image data from outerHTML", async () => {
+      const div = document.createElement("div");
+      div.id = "image-container";
+      // 긴 base64 데이터 시뮬레이션
+      const base64Data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+      div.innerHTML = `<img src="${base64Data}" alt="test image" />`;
+      document.body.appendChild(div);
+
+      const step: Step = {
+        type: "extract",
+        selector: "#image-container",
+        locator: { primary: "#image-container", fallbacks: [] },
+        prop: "outerHTML",
+        timeoutMs: 100
+      };
+
+      const result = await executeStep(step);
+
+      expect(result.success).toBe(true);
+      // base64 데이터가 제거되었는지 확인
+      expect(result.extractedData).not.toContain(base64Data);
+      // 포맷팅 확인
+      expect(result.extractedData).toContain('<img');
+      expect(result.extractedData).toContain('alt="test image"');
+      // data-image-removed 속성이 추가되었는지 확인 (구현 의존적일 수 있음)
+      expect(result.extractedData).toContain('data-image-removed="true"');
+    });
   });
 
   describe("WaitFor execution", () => {

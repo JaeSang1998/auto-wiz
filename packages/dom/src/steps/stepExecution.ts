@@ -231,8 +231,25 @@ export async function executeExtractStep(step: Step): Promise<ExecutionResult> {
     } else if (prop === "innerText") {
       extractedData = element.textContent?.trim() || "";
     } else if (prop === "outerHTML") {
-      // XML 구조를 보기 좋게 포맷팅
-      const rawHtml = element.outerHTML;
+      // XML 구조를 보기 좋게 포맷팅하기 전에 base64 이미지 제거
+      const cloned = element.cloneNode(true) as HTMLElement;
+
+      const processImage = (img: HTMLImageElement) => {
+        const src = img.getAttribute("src");
+        if (src && src.startsWith("data:image")) {
+          img.removeAttribute("src");
+          img.setAttribute("data-image-removed", "true");
+        }
+      };
+
+      if (cloned.tagName.toLowerCase() === "img") {
+        processImage(cloned as HTMLImageElement);
+      } else {
+        const images = cloned.querySelectorAll("img");
+        images.forEach((img) => processImage(img as HTMLImageElement));
+      }
+
+      const rawHtml = cloned.outerHTML;
       extractedData = formatXml(rawHtml);
     } else {
       extractedData = element.textContent?.trim() || "";
