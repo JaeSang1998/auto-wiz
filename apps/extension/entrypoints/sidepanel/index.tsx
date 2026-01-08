@@ -254,11 +254,23 @@ function SidePanelApp() {
 
     setSendStatus("Sending...");
 
+    // screenshot 데이터 제거하여 전송량 감소
+    const sanitizedSteps = flow.steps.map(step => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { screenshot, ...rest } = step as any;
+      return rest;
+    });
+
+    const sanitizedFlow = {
+      ...flow,
+      steps: sanitizedSteps
+    };
+
     try {
       await browser.runtime.sendMessage({
         type: "SEND_TO_BACKEND",
         endpoint,
-        flow,
+        flow: sanitizedFlow,
       });
     } catch (error) {
       setSendStatus(

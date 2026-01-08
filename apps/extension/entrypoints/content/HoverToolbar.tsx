@@ -294,17 +294,12 @@ export default function HoverToolbar({
       // 최신 target 기반으로 selector와 locator 재계산
       const currentSelector = makeSelector(target);
       const currentLocator = generateRobustLocator(target);
-      const screenshot = await captureElementScreenshot(
-        target,
-        currentSelector
-      );
 
       onRecord({
         type: "click",
         selector: currentSelector, // 하위 호환성
         locator: currentLocator, // 새로운 다중 selector 시스템
         url: window.location.href,
-        screenshot: screenshot || undefined,
       });
     },
     [target, captureElementScreenshot, onRecord]
@@ -345,19 +340,14 @@ export default function HoverToolbar({
       const onTextInput = (text: string | null) => {
         if (text !== null) {
           const maskedDisplayText = "*".repeat(text.length);
-          captureElementScreenshot(target, currentSelector).then(
-            (screenshot) => {
-              onRecord({
-                type: "type",
-                selector: currentSelector, // 하위 호환성
-                locator: currentLocator, // 새로운 다중 selector 시스템
-                text: maskedDisplayText,
-                originalText: text,
-                url: window.location.href,
-                screenshot: screenshot || undefined,
-              });
-            }
-          );
+          onRecord({
+            type: "type",
+            selector: currentSelector, // 하위 호환성
+            locator: currentLocator, // 새로운 다중 selector 시스템
+            text: maskedDisplayText,
+            originalText: text,
+            url: window.location.href,
+          });
         }
       };
 
@@ -396,18 +386,13 @@ export default function HoverToolbar({
 
       const onSelectOption = (selectedValue: string | null) => {
         if (selectedValue !== null) {
-          captureElementScreenshot(target, currentSelector).then(
-            (screenshot) => {
-              onRecord({
-                type: "select",
-                selector: currentSelector, // 하위 호환성
-                locator: currentLocator, // 새로운 다중 selector 시스템
-                value: selectedValue,
-                url: window.location.href,
-                screenshot: screenshot || undefined,
-              });
-            }
-          );
+          onRecord({
+            type: "select",
+            selector: currentSelector, // 하위 호환성
+            locator: currentLocator, // 새로운 다중 selector 시스템
+            value: selectedValue,
+            url: window.location.href,
+          });
         }
       };
 
@@ -439,10 +424,6 @@ export default function HoverToolbar({
       // 최신 target 기반으로 selector와 locator 재계산
       const currentSelector = makeSelector(target);
       const currentLocator = generateRobustLocator(target);
-      const screenshot = await captureElementScreenshot(
-        target,
-        currentSelector
-      );
 
       onRecord({
         type: "extract",
@@ -450,7 +431,6 @@ export default function HoverToolbar({
         locator: currentLocator, // 새로운 다중 selector 시스템
         prop: "outerHTML",
         url: window.location.href,
-        screenshot: screenshot || undefined,
       });
     },
     [target, captureElementScreenshot, onRecord]

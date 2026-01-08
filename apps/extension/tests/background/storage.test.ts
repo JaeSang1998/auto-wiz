@@ -18,7 +18,7 @@ describe("Background Storage Operations", () => {
 
       mockStorageGet({ flow: mockFlow });
 
-      const result = await browser.storage.local.get("flow");
+      const result = (await browser.storage.local.get("flow")) as { flow: Flow };
 
       expect(result.flow).toEqual(mockFlow);
       expect(result.flow.id).toBe("test-flow-id");
@@ -28,7 +28,9 @@ describe("Background Storage Operations", () => {
     it("should return empty object when no flow exists", async () => {
       mockStorageGet({});
 
-      const result = await browser.storage.local.get("flow");
+      const result = (await browser.storage.local.get("flow")) as {
+        flow?: Flow;
+      };
 
       expect(result).toEqual({});
       expect(result.flow).toBeUndefined();
@@ -49,7 +51,13 @@ describe("Background Storage Operations", () => {
 
       mockStorageGet(mockData);
 
-      const result = await browser.storage.local.get(["flow", "settings"]);
+      const result = (await browser.storage.local.get([
+        "flow",
+        "settings",
+      ])) as {
+        flow: Flow;
+        settings: { theme: string };
+      };
 
       expect(result.flow).toBeDefined();
       expect(result.settings).toBeDefined();
