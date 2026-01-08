@@ -191,13 +191,11 @@ export function FlowStepItem({
           textToShow.length > 30
             ? textToShow.substring(0, 30) + "..."
             : textToShow;
-        return `Type "${displayText}"${
-          elementDesc ? ` into ${elementDesc}` : ""
-        }${step.submit ? " ⏎" : ""}`;
+        return `Type "${displayText}"${elementDesc ? ` into ${elementDesc}` : ""
+          }${step.submit ? " ⏎" : ""}`;
       case "select":
-        return `Select "${step.value}"${
-          elementDesc ? ` from ${elementDesc}` : ""
-        }`;
+        return `Select "${step.value}"${elementDesc ? ` from ${elementDesc}` : ""
+          }`;
       case "extract":
         return elementDesc ? `Extract from ${elementDesc}` : "Extract data";
       case "navigate":
@@ -303,14 +301,14 @@ export function FlowStepItem({
         borderLeft: isExecuting
           ? "3px solid #1a1a1a"
           : isCompleted
-          ? "3px solid #737373"
-          : "3px solid transparent",
+            ? "3px solid #737373"
+            : "3px solid transparent",
         paddingLeft: "12px",
         background: isExecuting
           ? "#fafafa"
           : isCompleted
-          ? "#f9f9f9"
-          : "transparent",
+            ? "#f9f9f9"
+            : "transparent",
         transition: "all 0.15s ease",
       }}
     >
@@ -480,10 +478,15 @@ export function FlowStepItem({
             color: "#404040",
             fontFamily: "'SF Mono', 'Monaco', 'Menlo', monospace",
             lineHeight: "1.6",
+            whiteSpace: typeof extractedData === "string" ? "pre-wrap" : "normal",
+            maxHeight: "300px",
+            overflow: "auto",
           }}
         >
           <strong style={{ fontWeight: 500 }}>Extracted:</strong>{" "}
-          {JSON.stringify(extractedData)}
+          {typeof extractedData === "string"
+            ? extractedData
+            : JSON.stringify(extractedData)}
         </div>
       )}
 

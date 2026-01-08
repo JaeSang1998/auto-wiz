@@ -230,6 +230,10 @@ export async function executeExtractStep(step: Step): Promise<ExecutionResult> {
       extractedData = (element as HTMLInputElement).value;
     } else if (prop === "innerText") {
       extractedData = element.textContent?.trim() || "";
+    } else if (prop === "outerHTML") {
+      // XML 구조를 보기 좋게 포맷팅
+      const rawHtml = element.outerHTML;
+      extractedData = formatXml(rawHtml);
     } else {
       extractedData = element.textContent?.trim() || "";
     }
@@ -329,5 +333,53 @@ export async function executeStep(step: Step): Promise<ExecutionResult> {
       error: `Step execution failed: ${(error as Error).message}`,
     };
   }
+}
+
+/**
+ * Simple XML formatter for pretty printing
+ */
+function formatXml(xml: string): string {
+  let formatted = "";
+  let indent = 0;
+  const tab = "  ";
+
+  // 태그 사이의 공백 제거 및 줄바꿈 정규화
+  // 주석이나 CDATA 등은 고려하지 않은 단순 구현
+  xml = xml.replace(/>\s+</g, "><").trim();
+
+  // 태그 단위로 분리 - <tag>, </tag>, <tag ... />, text content
+  // 정규식 개선: 태그와 텍스트를 더 정확하게 분리
+  // <[^>]+> : 태그
+  // [^<]+ : 텍스트
+  const tags = xml.match(/<[^>]+>|[^<]+/g) || [];
+
+  tags.forEach(tag => {
+    // 닫는 태그 </... >
+    if (tag.match(/^<\//)) {
+      indent = Math.max(0, indent - 1);
+      formatted += "\n" + tab.repeat(indent) + tag;
+    }
+    // Self-closing 태그 <... /> 또는 <! ... > (Example: <!DOCTYPE>)
+    else if (tag.match(/^<.*\/>$/) || tag.match(/^<!/)) {
+      if (formatted.length > 0) formatted += "\n";
+      formatted += tab.repeat(indent) + tag;
+    }
+    // 여는 태그 <... >
+    else if (tag.match(/^<.*>$/)) {
+      if (formatted.length > 0) formatted += "\n";
+      formatted += tab.repeat(indent) + tag;
+      indent++;
+    }
+    // 텍스트 컨텐츠
+    else {
+      // 텍스트는 줄바꿈 없이 이어붙이되, 내용이 있는 경우만
+      const text = tag.trim();
+      if (text.length > 0) {
+        formatted += text;
+      }
+    }
+  });
+
+  return formatted.trim();
 }
 

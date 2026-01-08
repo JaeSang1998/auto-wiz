@@ -448,6 +448,7 @@ export default function HoverToolbar({
         type: "extract",
         selector: currentSelector, // 하위 호환성
         locator: currentLocator, // 새로운 다중 selector 시스템
+        prop: "outerHTML",
         url: window.location.href,
         screenshot: screenshot || undefined,
       });
