@@ -68,7 +68,19 @@ pnpm -r build
 
 Changes in `packages/core` or `packages/ui` will be automatically reflected in the extension if you are running `pnpm dev` in `apps/extension`, thanks to Vite's HMR and pnpm workspace symlinks.
 
-To strictly type-check or build a specific package:
+### Package Specifics
+
+| Package | Path | Build Command | Description |
+|---------|------|---------------|-------------|
+| **Extension** | `apps/extension` | `pnpm build` | Builds the Chrome extension to `.output/` |
+| | | `pnpm dev` | Starts dev server with HMR |
+| | | `pnpm zip` | Creates a simplified zip for distribution |
+| | | `pnpm compile` | Runs TypeScript type checking |
+| **Core** | `packages/core` | `pnpm build` | Compiles the core logic |
+| **DOM** | `packages/dom` | `pnpm build` | Compiles DOM manipulation utilities |
+| **UI** | `packages/ui` | `pnpm build` | Compiles the shared React UI library |
+
+To build a specific package individually:
 
 ```bash
 pnpm --filter @auto-wiz/core build
