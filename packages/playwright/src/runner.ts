@@ -135,30 +135,34 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
             });
           } else {
             // Default "structure": clean HTML, keep only id, name, text
-            text = await locator.evaluate((el) => {
+            text = await locator.evaluate(function (el) {
               const clone = el.cloneNode(true) as Element;
 
-              function cleanElement(element: Element) {
-                // Remove all attributes except id and name
-                const attributes = Array.from(element.attributes);
-                for (const attr of attributes) {
-                  if (!["id", "name"].includes(attr.name)) {
-                    element.removeAttribute(attr.name);
-                  }
-                }
+              // 1. Remove SVGs first
+              const svgs = clone.querySelectorAll("svg");
+              for (const svg of Array.from(svgs)) {
+                svg.remove();
+              }
 
-                // DFS for children
-                for (const child of Array.from(element.children)) {
-                  // Remove SVGs entirely
-                  if (child.tagName.toLowerCase() === "svg") {
-                    child.remove();
-                  } else {
-                    cleanElement(child);
+              // 2. Clean attributes of all descendants
+              const descendants = clone.querySelectorAll("*");
+              for (const child of Array.from(descendants)) {
+                const attrs = Array.from(child.attributes);
+                for (const attr of attrs) {
+                  if (attr.name !== "id" && attr.name !== "name") {
+                    child.removeAttribute(attr.name);
                   }
                 }
               }
 
-              cleanElement(clone);
+              // 3. Clean attributes of the root element itself
+              const rootAttrs = Array.from(clone.attributes);
+              for (const attr of rootAttrs) {
+                if (attr.name !== "id" && attr.name !== "name") {
+                  clone.removeAttribute(attr.name);
+                }
+              }
+
               return clone.outerHTML;
             });
           }
