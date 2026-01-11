@@ -1,6 +1,6 @@
 {
   "name": "@auto-wiz/puppeteer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "license": "MIT",
   "author": "JaeSang",
   "repository": {
@@ -25,11 +25,14 @@
   "scripts": {
     "build": "tsc"
   },
+  "peerDependencies": {
+    "@auto-wiz/core": "^1.1.4"
+  },
   "dependencies": {
-    "@auto-wiz/core": "workspace:*",
     "puppeteer": "^23.0.0"
   },
   "devDependencies": {
+    "@auto-wiz/core": "workspace:*",
     "typescript": "^5.0.0",
     "@types/node": "^20.0.0"
   }

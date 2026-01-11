@@ -147,13 +147,13 @@ importers:
 
   packages/playwright:
     dependencies:
-      '@auto-wiz/core':
-        specifier: workspace:*
-        version: link:../core
       playwright:
         specifier: ^1.40.0
         version: 1.57.0
     devDependencies:
+      '@auto-wiz/core':
+        specifier: workspace:*
+        version: link:../core
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.27
@@ -163,13 +163,13 @@ importers:
 
   packages/puppeteer:
     dependencies:
-      '@auto-wiz/core':
-        specifier: workspace:*
-        version: link:../core
       puppeteer:
         specifier: ^23.0.0
         version: 23.11.1(typescript@5.9.3)
     devDependencies:
+      '@auto-wiz/core':
+        specifier: workspace:*
+        version: link:../core
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.27

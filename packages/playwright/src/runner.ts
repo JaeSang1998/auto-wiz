@@ -133,18 +133,127 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
               svgs.forEach((svg) => svg.remove());
               return clone.outerHTML;
             });
+          } else if (step.prop === "simplified") {
+            // Simplified: Canonical transformation, lighter but preserves hierarchy
+            text = await locator.evaluate((el) => {
+              const clone = el.cloneNode(true) as Element;
+
+              const blockListTags = [
+                "SCRIPT",
+                "STYLE",
+                "SVG",
+                "NOSCRIPT",
+                "IFRAME",
+                "OBJECT",
+                "EMBED",
+                "PARAM",
+                "SOURCE",
+                "TRACK",
+                "AREA",
+                "MAP",
+                "META",
+                "LINK",
+                "HEAD",
+              ];
+              const allowedAttributes = [
+                "id",
+                "name",
+                "href",
+                "src",
+                "alt",
+                "value",
+                "type",
+                "placeholder",
+                "title",
+                "colspan",
+                "rowspan",
+                "target",
+              ];
+              const isGenericContainer = (tagName: string) =>
+                ["DIV", "SPAN"].includes(tagName);
+
+              function clean(node: Element) {
+                if (blockListTags.includes(node.tagName)) {
+                  node.remove();
+                  return;
+                }
+
+                const children = Array.from(node.children);
+                for (const child of children) {
+                  clean(child);
+                }
+
+                const attrs = Array.from(node.attributes || []);
+                for (const attr of attrs) {
+                  if (!allowedAttributes.includes(attr.name)) {
+                    node.removeAttribute(attr.name);
+                  }
+                }
+
+                if (isGenericContainer(node.tagName)) {
+                  const hasIdOrName =
+                    node.hasAttribute("id") || node.hasAttribute("name");
+
+                  if (hasIdOrName) {
+                    const hasChildNodes = node.childNodes.length > 0;
+                    if (!hasChildNodes) {
+                      node.remove();
+                    }
+                    return;
+                  }
+
+                  const childElements = node.children;
+                  let hasText = false;
+                  for (const childNode of Array.from(node.childNodes)) {
+                    if (
+                      childNode.nodeType === 3 &&
+                      (childNode.textContent || "").trim() !== ""
+                    ) {
+                      hasText = true;
+                      break;
+                    }
+                  }
+
+                  if (node.tagName === "SPAN") {
+                    const parent = node.parentNode;
+                    if (parent) {
+                      while (node.firstChild) {
+                        parent.insertBefore(node.firstChild, node);
+                      }
+                      parent.removeChild(node);
+                    }
+                    return;
+                  }
+
+                  if (childElements.length === 1 && !hasText) {
+                    const singleChild = childElements[0];
+                    const parent = node.parentNode;
+                    if (parent) {
+                      node.replaceWith(singleChild);
+                    }
+                    return;
+                  }
+
+                  if (childElements.length === 0 && !hasText) {
+                    node.remove();
+                    return;
+                  }
+                }
+              }
+
+              clean(clone);
+              return clone.outerHTML;
+            });
           } else {
             // Default "structure": clean HTML, keep only id, name, text
             text = await locator.evaluate(function (el) {
               const clone = el.cloneNode(true) as Element;
 
-              // 1. Remove SVGs first
               const svgs = clone.querySelectorAll("svg");
               for (const svg of Array.from(svgs)) {
                 svg.remove();
               }
 
-              // 2. Clean attributes of all descendants
               const descendants = clone.querySelectorAll("*");
               for (const child of Array.from(descendants)) {
                 const attrs = Array.from(child.attributes);
@@ -155,7 +264,6 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
                 }
               }
 
-              // 3. Clean attributes of the root element itself
               const rootAttrs = Array.from(clone.attributes);
               for (const attr of rootAttrs) {
                 if (attr.name !== "id" && attr.name !== "name") {

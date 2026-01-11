@@ -55,7 +55,7 @@ type CoreStep =
       type: "extract";
       selector: string; // deprecated: 하위 호환성을 위해 유지
       locator?: ElementLocator;
-      prop?: "innerText" | "value" | "outerHTML" | "structure";
+      prop?: "innerText" | "value" | "outerHTML" | "structure" | "simplified";
       url?: string;
       screenshot?: string;
       timeoutMs?: number;
