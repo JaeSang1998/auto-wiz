@@ -119,7 +119,19 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
 
         case "extract": {
           const locator = await this.resolveLocator(page, step, timeout);
-          const text = await locator.textContent({ timeout });
+          let text: string | null = null;
+
+          if (step.prop === "outerHTML") {
+            text = await locator.evaluate((el) => el.outerHTML);
+          } else if (step.prop === "value") {
+            text = await locator.inputValue();
+          } else if (step.prop === "innerText") {
+            text = await locator.innerText({ timeout });
+          } else {
+            // Default match 'outerHTML' if prop is not specified
+            text = await locator.evaluate((el) => el.outerHTML);
+          }
+
           return { success: true, extractedData: text?.trim() };
         }
 
