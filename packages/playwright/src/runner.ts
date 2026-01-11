@@ -17,6 +17,35 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
   ): Promise<RunResult> {
     const extractedData: Record<string, any> = {};
 
+    // Implicit Navigation:
+    // If we are on a blank page and the first step has a URL but is NOT a 'navigate' step,
+    // we should navigate to that URL to start the flow.
+    if (page.url() === "about:blank" && flow.steps.length > 0) {
+      const firstStep = flow.steps[0];
+      // Check if the step has a url property (it might not be in the Step type definition for all types)
+      if (
+        firstStep.type !== "navigate" &&
+        "url" in firstStep &&
+        (firstStep as any).url
+      ) {
+        try {
+          // Use the provided timeout or default 5s
+          await page.goto((firstStep as any).url, {
+            timeout: options.timeout || 5000,
+            waitUntil: "domcontentloaded",
+          });
+        } catch (error) {
+          // If navigation fails, we return early as the flow cannot proceed
+          return {
+            success: false,
+            error: `Implicit navigation failed: ${(error as Error).message}`,
+            failedStepIndex: 0,
+            extractedData,
+          };
+        }
+      }
+    }
+
     for (const [index, step] of flow.steps.entries()) {
       try {
         const result = await this.runStep(step, page, options);
@@ -65,13 +94,13 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
           break;
 
         case "click": {
-          const locator = this.getLocator(page, step);
+          const locator = await this.resolveLocator(page, step, timeout);
           await locator.click({ timeout });
           break;
         }
 
         case "type": {
-          const locator = this.getLocator(page, step);
+          const locator = await this.resolveLocator(page, step, timeout);
           const text = step.text || (step as any).originalText || "";
           await locator.fill(text, { timeout });
           if (step.submit) {
@@ -81,7 +110,7 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
         }
 
         case "select": {
-          const locator = this.getLocator(page, step);
+          const locator = await this.resolveLocator(page, step, timeout);
           if (step.value) {
             await locator.selectOption(step.value, { timeout });
           }
@@ -89,18 +118,16 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
         }
 
         case "extract": {
-          const locator = this.getLocator(page, step);
+          const locator = await this.resolveLocator(page, step, timeout);
           const text = await locator.textContent({ timeout });
           return { success: true, extractedData: text?.trim() };
         }
 
         case "waitFor": {
           if (step.selector || step.locator) {
-            const locator = this.getLocator(page, step);
-            await locator.waitFor({
-              state: "visible",
-              timeout: step.timeoutMs || timeout,
-            });
+            // resolveLocator internally waits for visibility, so this is implicitly handled,
+            // but we call it to ensure we find the valid element.
+            await this.resolveLocator(page, step, step.timeoutMs || timeout);
           } else if (step.timeoutMs) {
             await page.waitForTimeout(step.timeoutMs);
           }
@@ -113,14 +140,62 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
     }
   }
 
-  private getLocator(page: Page, step: Step): Locator {
+  private async resolveLocator(
+    page: Page,
+    step: Step,
+    timeout: number
+  ): Promise<Locator> {
+    const candidates: string[] = [];
+
+    // 1. Gather all candidate selectors
     if ("locator" in step && step.locator) {
-      const { primary } = step.locator as ElementLocator;
-      return page.locator(primary).first();
+      const { primary, fallbacks = [] } = step.locator as ElementLocator;
+      candidates.push(primary, ...fallbacks);
+    } else if ("selector" in step && step.selector) {
+      candidates.push(step.selector);
+    } else {
+      throw new Error(`Step ${step.type} requires a selector or locator`);
     }
-    if ("selector" in step && step.selector) {
-      return page.locator(step.selector).first();
+
+    if (candidates.length === 0) {
+      throw new Error(`Step ${step.type} has no valid selectors`);
     }
-    throw new Error(`Step ${step.type} requires a selector or locator`);
+
+    // 2. If only one candidate, just return it (Playwright's default behavior)
+    if (candidates.length === 1) {
+      return page.locator(candidates[0]).first();
+    }
+
+    // 3. Parallel Race: Check all candidates for visibility
+    // We create a promise for each candidate that resolves if the element becomes visible
+    // and returns the corresponding Locator.
+    const promises = candidates.map(async (selector) => {
+      const loc = page.locator(selector).first();
+      try {
+        // Wait for it to be visible.
+        // We use the full timeout for each parallel check.
+        // The first one to succeed wins.
+        await loc.waitFor({ state: "visible", timeout });
+        return loc;
+      } catch (err) {
+        // If this specific selector fails, we throw so Promise.any ignores it
+        // (unless all fail)
+        throw err;
+      }
+    });
+
+    try {
+      // Promise.any resolves with the first fulfilled promise.
+      // If all reject, it throws an AggregateError.
+      const winner = await Promise.any(promises);
+      return winner;
+    } catch (error) {
+      // If all failed, throw a descriptive error
+      throw new Error(
+        `Failed to resolve locator. Tried candidates: ${JSON.stringify(
+          candidates
+        )}. Error: ${(error as Error).message}`
+      );
+    }
   }
 }
