@@ -5,35 +5,35 @@
 export interface ElementLocator {
   /** Primary selector (가장 신뢰할 수 있는) */
   primary: string;
-  
+
   /** Fallback selectors (우선순위 순서대로) */
   fallbacks: string[];
-  
+
   /** 요소 메타데이터 (fuzzy matching용) */
   metadata?: {
-    text?: string;        // 요소의 텍스트 내용
-    role?: string;        // ARIA role
-    tagName?: string;     // HTML 태그명
-    testId?: string;      // data-testid
-    ariaLabel?: string;   // aria-label
+    text?: string; // 요소의 텍스트 내용
+    role?: string; // ARIA role
+    tagName?: string; // HTML 태그명
+    testId?: string; // data-testid
+    ariaLabel?: string; // aria-label
     placeholder?: string; // placeholder 속성
-    title?: string;       // title 속성
+    title?: string; // title 속성
   };
 }
 
 // 레코드 가능한 액션 타입
 type CoreStep =
-  | { 
-      type: "click"; 
-      selector: string;  // deprecated: 하위 호환성을 위해 유지
-      locator?: ElementLocator;  // 새로운 다중 selector 시스템
-      url?: string; 
+  | {
+      type: "click";
+      selector: string; // deprecated: 하위 호환성을 위해 유지
+      locator?: ElementLocator; // 새로운 다중 selector 시스템
+      url?: string;
       screenshot?: string;
       timeoutMs?: number;
     }
   | {
       type: "type";
-      selector: string;  // deprecated: 하위 호환성을 위해 유지
+      selector: string; // deprecated: 하위 호환성을 위해 유지
       locator?: ElementLocator;
       text: string;
       originalText?: string; // 보안을 위해 마스킹된 원본 텍스트
@@ -44,7 +44,7 @@ type CoreStep =
     }
   | {
       type: "select";
-      selector: string;  // deprecated: 하위 호환성을 위해 유지
+      selector: string; // deprecated: 하위 호환성을 위해 유지
       locator?: ElementLocator;
       value: string; // 선택할 옵션의 value 또는 text
       url?: string;
@@ -53,16 +53,16 @@ type CoreStep =
     }
   | {
       type: "extract";
-      selector: string;  // deprecated: 하위 호환성을 위해 유지
+      selector: string; // deprecated: 하위 호환성을 위해 유지
       locator?: ElementLocator;
-      prop?: "innerText" | "value" | "outerHTML";
+      prop?: "innerText" | "value" | "outerHTML" | "structure";
       url?: string;
       screenshot?: string;
       timeoutMs?: number;
     }
   | {
       type: "waitFor";
-      selector?: string;  // deprecated: 하위 호환성을 위해 유지
+      selector?: string; // deprecated: 하위 호환성을 위해 유지
       locator?: ElementLocator;
       timeoutMs?: number;
       url?: string;
@@ -70,7 +70,7 @@ type CoreStep =
     }
   | {
       type: "screenshot";
-      selector: string;  // deprecated: 하위 호환성을 위해 유지
+      selector: string; // deprecated: 하위 호환성을 위해 유지
       locator?: ElementLocator;
       url?: string;
       screenshot: string;

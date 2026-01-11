@@ -125,12 +125,40 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
             text = await locator.inputValue();
           } else if (step.prop === "innerText") {
             text = await locator.innerText({ timeout });
-          } else {
-            // Default match 'outerHTML' if prop is not specified or explicit 'outerHTML'
+          } else if (step.prop === "outerHTML") {
+            // Explicit 'outerHTML' requests full HTML (with SVGs stripped per existing logic)
             text = await locator.evaluate((el) => {
               const clone = el.cloneNode(true) as Element;
               const svgs = clone.querySelectorAll("svg");
               svgs.forEach((svg) => svg.remove());
+              return clone.outerHTML;
+            });
+          } else {
+            // Default "structure": clean HTML, keep only id, name, text
+            text = await locator.evaluate((el) => {
+              const clone = el.cloneNode(true) as Element;
+
+              function cleanElement(element: Element) {
+                // Remove all attributes except id and name
+                const attributes = Array.from(element.attributes);
+                for (const attr of attributes) {
+                  if (!["id", "name"].includes(attr.name)) {
+                    element.removeAttribute(attr.name);
+                  }
+                }
+
+                // DFS for children
+                for (const child of Array.from(element.children)) {
+                  // Remove SVGs entirely
+                  if (child.tagName.toLowerCase() === "svg") {
+                    child.remove();
+                  } else {
+                    cleanElement(child);
+                  }
+                }
+              }
+
+              cleanElement(clone);
               return clone.outerHTML;
             });
           }
