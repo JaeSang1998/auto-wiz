@@ -71,7 +71,8 @@ export class PuppeteerFlowRunner implements FlowRunner<Page> {
 
         case "type": {
           const el = await this.getElement(page, step, timeout);
-          const rawText = step.text || (step as any).originalText || "";
+          // originalText가 실제 값, text는 마스킹된 값
+          const rawText = (step as any).originalText || step.text || "";
           const text = this.resolveText(rawText, options.variables);
           await el.type(text);
           if (step.submit) {
