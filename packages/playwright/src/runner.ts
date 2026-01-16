@@ -48,6 +48,11 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
 
     for (const [index, step] of flow.steps.entries()) {
       try {
+        // Step delay for debugging
+        if (options.stepDelay && index > 0) {
+          await page.waitForTimeout(options.stepDelay);
+        }
+
         const result = await this.runStep(step, page, options);
 
         if (!result.success) {
