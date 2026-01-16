@@ -279,7 +279,7 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
         }
 
         case "waitFor": {
-          if (step.selector || step.locator) {
+          if (step.locator) {
             // resolveLocator internally waits for visibility, so this is implicitly handled,
             // but we call it to ensure we find the valid element.
             await this.resolveLocator(page, step, step.timeoutMs || timeout);
@@ -300,28 +300,23 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
     step: Step,
     timeout: number
   ): Promise<Locator> {
-    const candidates: string[] = [];
-
-    // 1. Gather all candidate selectors
-    if ("locator" in step && step.locator) {
-      const { primary, fallbacks = [] } = step.locator as ElementLocator;
-      candidates.push(primary, ...fallbacks);
-    } else if ("selector" in step && step.selector) {
-      candidates.push(step.selector);
-    } else {
-      throw new Error(`Step ${step.type} requires a selector or locator`);
+    if (!("locator" in step) || !step.locator) {
+      throw new Error(`Step ${step.type} requires a locator`);
     }
+
+    const { primary, fallbacks = [] } = step.locator as ElementLocator;
+    const candidates = [primary, ...fallbacks];
 
     if (candidates.length === 0) {
       throw new Error(`Step ${step.type} has no valid selectors`);
     }
 
-    // 2. If only one candidate, just return it (Playwright's default behavior)
+    // If only one candidate, just return it (Playwright's default behavior)
     if (candidates.length === 1) {
       return page.locator(candidates[0]).first();
     }
 
-    // 3. Parallel Race: Check all candidates for visibility
+    // Parallel Race: Check all candidates for visibility
     // We create a promise for each candidate that resolves if the element becomes visible
     // and returns the corresponding Locator.
     const promises = candidates.map(async (selector) => {

@@ -25,16 +25,14 @@ export interface ElementLocator {
 type CoreStep =
   | {
       type: "click";
-      selector: string; // deprecated: 하위 호환성을 위해 유지
-      locator?: ElementLocator; // 새로운 다중 selector 시스템
+      locator: ElementLocator;
       url?: string;
       screenshot?: string;
       timeoutMs?: number;
     }
   | {
       type: "type";
-      selector: string; // deprecated: 하위 호환성을 위해 유지
-      locator?: ElementLocator;
+      locator: ElementLocator;
       text: string;
       originalText?: string; // 보안을 위해 마스킹된 원본 텍스트
       submit?: boolean; // 입력 후 Enter 제출 여부
@@ -44,8 +42,7 @@ type CoreStep =
     }
   | {
       type: "select";
-      selector: string; // deprecated: 하위 호환성을 위해 유지
-      locator?: ElementLocator;
+      locator: ElementLocator;
       value: string; // 선택할 옵션의 value 또는 text
       url?: string;
       screenshot?: string;
@@ -53,8 +50,7 @@ type CoreStep =
     }
   | {
       type: "extract";
-      selector: string; // deprecated: 하위 호환성을 위해 유지
-      locator?: ElementLocator;
+      locator: ElementLocator;
       prop?: "innerText" | "value" | "outerHTML" | "structure" | "simplified";
       url?: string;
       screenshot?: string;
@@ -62,16 +58,14 @@ type CoreStep =
     }
   | {
       type: "waitFor";
-      selector?: string; // deprecated: 하위 호환성을 위해 유지
-      locator?: ElementLocator;
+      locator?: ElementLocator; // locator 또는 timeoutMs 중 하나 필요
       timeoutMs?: number;
       url?: string;
       screenshot?: string;
     }
   | {
       type: "screenshot";
-      selector: string; // deprecated: 하위 호환성을 위해 유지
-      locator?: ElementLocator;
+      locator: ElementLocator;
       url?: string;
       screenshot: string;
       timeoutMs?: number;
@@ -133,7 +127,7 @@ export type ElementScreenshotMessage = {
   screenshot: string; // base64 이미지 데이터
   elementInfo: {
     tagName: string;
-    selector: string;
+    locator: string; // primary selector
     text?: string;
   };
 };

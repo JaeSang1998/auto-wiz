@@ -100,7 +100,7 @@ export class PuppeteerFlowRunner implements FlowRunner<Page> {
         }
 
         case "waitFor": {
-          if (step.selector || step.locator) {
+          if (step.locator) {
             const selector = this.getSelector(step);
             await page.waitForSelector(selector, {
               visible: true,
@@ -119,14 +119,11 @@ export class PuppeteerFlowRunner implements FlowRunner<Page> {
   }
 
   private getSelector(step: Step): string {
-    if ("locator" in step && step.locator) {
-      const { primary } = step.locator as ElementLocator;
-      return primary;
+    if (!("locator" in step) || !step.locator) {
+      throw new Error(`Step ${step.type} requires a locator`);
     }
-    if ("selector" in step && step.selector) {
-      return step.selector;
-    }
-    throw new Error(`Step ${step.type} requires a selector or locator`);
+    const { primary } = step.locator as ElementLocator;
+    return primary;
   }
 
   private async getElement(

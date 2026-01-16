@@ -46,8 +46,8 @@ function validateClickStep(step: Step): ValidationResult {
     return { valid: false, error: "Invalid step type for click validation" };
   }
 
-  if (!step.selector) {
-    return { valid: false, error: "Click step requires selector" };
+  if (!step.locator) {
+    return { valid: false, error: "Click step requires locator" };
   }
 
   return { valid: true };
@@ -58,8 +58,8 @@ function validateTypeStep(step: Step): ValidationResult {
     return { valid: false, error: "Invalid step type for type validation" };
   }
 
-  if (!step.selector) {
-    return { valid: false, error: "Type step requires selector" };
+  if (!step.locator) {
+    return { valid: false, error: "Type step requires locator" };
   }
 
   if (step.text === undefined && step.originalText === undefined) {
@@ -74,8 +74,8 @@ function validateSelectStep(step: Step): ValidationResult {
     return { valid: false, error: "Invalid step type for select validation" };
   }
 
-  if (!step.selector) {
-    return { valid: false, error: "Select step requires selector" };
+  if (!step.locator) {
+    return { valid: false, error: "Select step requires locator" };
   }
 
   if (step.value === undefined) {
@@ -90,8 +90,8 @@ function validateExtractStep(step: Step): ValidationResult {
     return { valid: false, error: "Invalid step type for extract validation" };
   }
 
-  if (!step.selector) {
-    return { valid: false, error: "Extract step requires selector" };
+  if (!step.locator) {
+    return { valid: false, error: "Extract step requires locator" };
   }
 
   return { valid: true };
@@ -121,10 +121,10 @@ function validateWaitForStep(step: Step): ValidationResult {
     return { valid: false, error: "Invalid step type for waitFor validation" };
   }
 
-  if (!step.selector && step.timeoutMs === undefined) {
+  if (!step.locator && step.timeoutMs === undefined) {
     return {
       valid: false,
-      error: "WaitFor step requires selector or timeoutMs",
+      error: "WaitFor step requires locator or timeoutMs",
     };
   }
 
