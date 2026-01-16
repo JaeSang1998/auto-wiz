@@ -1,4 +1,4 @@
-import type { Step } from "@auto-wiz/core";
+import type { Step, RunnerOptions } from "@auto-wiz/core";
 import { waitForLocator, isInteractable } from "../selectors/locatorUtils";
 
 /**
@@ -77,9 +77,23 @@ export async function executeClickStep(step: Step): Promise<ExecutionResult> {
 }
 
 /**
+ * Resolve placeholders in text (e.g., {{username}} → variables.username)
+ */
+function resolveText(
+  text: string,
+  variables?: Record<string, string>
+): string {
+  if (!variables || !text) return text;
+  return text.replace(/\{\{(\w+)\}\}/g, (_, key) => variables[key] ?? "");
+}
+
+/**
  * Type step 실행
  */
-export async function executeTypeStep(step: Step): Promise<ExecutionResult> {
+export async function executeTypeStep(
+  step: Step,
+  options: RunnerOptions = {}
+): Promise<ExecutionResult> {
   if (step.type !== "type") {
     return { success: false, error: "Invalid type step" };
   }
@@ -111,7 +125,8 @@ export async function executeTypeStep(step: Step): Promise<ExecutionResult> {
   }
 
   try {
-    const text = step.originalText || step.text || "";
+    const rawText = step.originalText || step.text || "";
+    const text = resolveText(rawText, options.variables);
     element.value = text;
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -297,13 +312,16 @@ export async function executeWaitForStep(step: Step): Promise<ExecutionResult> {
 /**
  * Step 실행 (타입에 따라 자동 분기)
  */
-export async function executeStep(step: Step): Promise<ExecutionResult> {
+export async function executeStep(
+  step: Step,
+  options: RunnerOptions = {}
+): Promise<ExecutionResult> {
   try {
     switch (step.type) {
       case "click":
         return await executeClickStep(step);
       case "type":
-        return await executeTypeStep(step);
+        return await executeTypeStep(step, options);
       case "select":
         return await executeSelectStep(step);
       case "extract":

@@ -71,7 +71,8 @@ export class PuppeteerFlowRunner implements FlowRunner<Page> {
 
         case "type": {
           const el = await this.getElement(page, step, timeout);
-          const text = step.text || (step as any).originalText || "";
+          const rawText = step.text || (step as any).originalText || "";
+          const text = this.resolveText(rawText, options.variables);
           await el.type(text);
           if (step.submit) {
             await page.keyboard.press("Enter");
@@ -116,6 +117,17 @@ export class PuppeteerFlowRunner implements FlowRunner<Page> {
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
+  }
+
+  /**
+   * Resolve placeholders in text (e.g., {{username}} → variables.username)
+   */
+  private resolveText(
+    text: string,
+    variables?: Record<string, string>
+  ): string {
+    if (!variables || !text) return text;
+    return text.replace(/\{\{(\w+)\}\}/g, (_, key) => variables[key] ?? "");
   }
 
   private getSelector(step: Step): string {

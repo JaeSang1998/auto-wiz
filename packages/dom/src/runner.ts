@@ -11,8 +11,8 @@ import { executeStep } from "./steps/stepExecution";
 export class DomFlowRunner implements FlowRunner<void> {
   async run(
     flow: Flow,
-    _context: any = {}, // unused
-    _options: RunnerOptions = {} // unused
+    _context: any = {},
+    options: RunnerOptions = {}
   ): Promise<RunResult> {
     const extractedData: Record<string, any> = {};
     const steps = flow.steps;
@@ -20,7 +20,7 @@ export class DomFlowRunner implements FlowRunner<void> {
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
       try {
-        const result = await this.runStep(step);
+        const result = await this.runStep(step, undefined, options);
 
         if (!result.success) {
           return {
@@ -47,10 +47,14 @@ export class DomFlowRunner implements FlowRunner<void> {
     return { success: true, extractedData };
   }
 
-  async runStep(step: Step): Promise<ExecutionResult> {
+  async runStep(
+    step: Step,
+    _context?: void,
+    options: RunnerOptions = {}
+  ): Promise<ExecutionResult> {
     try {
       // Direct DOM execution using existing logic
-      const result = await executeStep(step);
+      const result = await executeStep(step, options);
       return result;
     } catch (error) {
       return { success: false, error: (error as Error).message };
