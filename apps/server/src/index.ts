@@ -24,7 +24,7 @@ app.post("/run/playwright", async (req, res) => {
 
     const runner = new PlaywrightFlowRunner();
     const result = await runner.run(flow, page, {
-      stepDelay: 1000,
+      stepDelay: 300,
     });
 
     res.json(result);
