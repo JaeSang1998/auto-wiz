@@ -48,6 +48,11 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
 
     for (const [index, step] of flow.steps.entries()) {
       try {
+        // Step delay for debugging
+        if (options.stepDelay && index > 0) {
+          await page.waitForTimeout(options.stepDelay);
+        }
+
         const result = await this.runStep(step, page, options);
 
         if (!result.success) {
@@ -101,7 +106,9 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
 
         case "type": {
           const locator = await this.resolveLocator(page, step, timeout);
-          const text = step.text || (step as any).originalText || "";
+          // originalText가 실제 값, text는 마스킹된 값
+          const rawText = (step as any).originalText || step.text || "";
+          const text = this.resolveText(rawText, options.variables);
           await locator.fill(text, { timeout });
           if (step.submit) {
             await locator.press("Enter");
@@ -279,7 +286,7 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
         }
 
         case "waitFor": {
-          if (step.selector || step.locator) {
+          if (step.locator) {
             // resolveLocator internally waits for visibility, so this is implicitly handled,
             // but we call it to ensure we find the valid element.
             await this.resolveLocator(page, step, step.timeoutMs || timeout);
@@ -295,33 +302,39 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
     }
   }
 
+  /**
+   * Resolve placeholders in text (e.g., {{username}} → variables.username)
+   */
+  private resolveText(
+    text: string,
+    variables?: Record<string, string>
+  ): string {
+    if (!variables || !text) return text;
+    return text.replace(/\{\{(\w+)\}\}/g, (_, key) => variables[key] ?? "");
+  }
+
   private async resolveLocator(
     page: Page,
     step: Step,
     timeout: number
   ): Promise<Locator> {
-    const candidates: string[] = [];
-
-    // 1. Gather all candidate selectors
-    if ("locator" in step && step.locator) {
-      const { primary, fallbacks = [] } = step.locator as ElementLocator;
-      candidates.push(primary, ...fallbacks);
-    } else if ("selector" in step && step.selector) {
-      candidates.push(step.selector);
-    } else {
-      throw new Error(`Step ${step.type} requires a selector or locator`);
+    if (!("locator" in step) || !step.locator) {
+      throw new Error(`Step ${step.type} requires a locator`);
     }
+
+    const { primary, fallbacks = [] } = step.locator as ElementLocator;
+    const candidates = [primary, ...fallbacks];
 
     if (candidates.length === 0) {
       throw new Error(`Step ${step.type} has no valid selectors`);
     }
 
-    // 2. If only one candidate, just return it (Playwright's default behavior)
+    // If only one candidate, just return it (Playwright's default behavior)
     if (candidates.length === 1) {
       return page.locator(candidates[0]).first();
     }
 
-    // 3. Parallel Race: Check all candidates for visibility
+    // Parallel Race: Check all candidates for visibility
     // We create a promise for each candidate that resolves if the element becomes visible
     // and returns the corresponding Locator.
     const promises = candidates.map(async (selector) => {

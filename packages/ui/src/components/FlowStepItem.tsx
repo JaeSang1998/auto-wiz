@@ -98,9 +98,8 @@ export function FlowStepItem({
     const metadata = locator?.metadata;
 
     if (!metadata) {
-      // fallback: selector를 간략하게 표시
-      const selector = "selector" in step ? step.selector : "";
-      return simplifySelector(selector);
+      // fallback: primary selector를 간략하게 표시
+      return simplifySelector(locator?.primary);
     }
 
     // 메타데이터에서 가장 의미있는 정보 추출
@@ -142,9 +141,7 @@ export function FlowStepItem({
       parts.push(`[${metadata.testId}]`);
     }
 
-    return parts.length > 0
-      ? parts.join(" ")
-      : simplifySelector("selector" in step ? step.selector : "");
+    return parts.length > 0 ? parts.join(" ") : simplifySelector(locator?.primary);
   };
 
   /**
@@ -210,7 +207,7 @@ export function FlowStepItem({
           step.url.length > 50 ? step.url.substring(0, 50) + "..." : step.url;
         return `Navigate to ${url}`;
       case "waitFor":
-        if (step.selector) {
+        if (step.locator) {
           return elementDesc ? `Wait for ${elementDesc}` : "Wait for element";
         }
         return `Wait ${step.timeoutMs}ms`;

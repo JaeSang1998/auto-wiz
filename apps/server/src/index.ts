@@ -23,7 +23,9 @@ app.post("/run/playwright", async (req, res) => {
     const page = await browser.newPage();
 
     const runner = new PlaywrightFlowRunner();
-    const result = await runner.run(flow, page);
+    const result = await runner.run(flow, page, {
+      stepDelay: 300,
+    });
 
     res.json(result);
   } catch (error) {

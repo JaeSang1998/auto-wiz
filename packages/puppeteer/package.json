@@ -1,6 +1,6 @@
 {
   "name": "@auto-wiz/puppeteer",
-  "version": "1.1.0",
+  "version": "1.2.2",
   "license": "MIT",
   "author": "JaeSang",
   "repository": {
@@ -26,7 +26,7 @@
     "build": "tsc"
   },
   "peerDependencies": {
-    "@auto-wiz/core": "^1.1.4"
+    "@auto-wiz/core": "^1.2.0"
   },
   "dependencies": {
     "puppeteer": "^23.0.0"

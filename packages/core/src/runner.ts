@@ -17,6 +17,10 @@ export interface RunResult {
 export interface RunnerOptions {
   timeout?: number;
   stopOnError?: boolean;
+  /** Variables for placeholder substitution (e.g., {{username}} → variables.username) */
+  variables?: Record<string, string>;
+  /** Delay between steps in ms (useful for debugging) */
+  stepDelay?: number;
 }
 
 /**

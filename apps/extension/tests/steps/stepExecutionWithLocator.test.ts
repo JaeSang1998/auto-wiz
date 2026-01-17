@@ -354,31 +354,6 @@ describe("Step Execution with Locator Integration", () => {
     });
   });
 
-  describe("Backward compatibility", () => {
-    it("should work with selector only (no locator)", async () => {
-      let clicked = false;
-      container.innerHTML = `
-        <button id="old-style">Old Style</button>
-      `;
-
-      const button = container.querySelector("button") as HTMLElement;
-      button.addEventListener("click", () => {
-        clicked = true;
-      });
-
-      const step: Step = {
-        type: "click",
-        selector: "#old-style",
-        // locator 없음 (하위 호환성)
-      };
-
-      const result = await executeClickStep(step);
-
-      expect(result.success).toBe(true);
-      expect(clicked).toBe(true);
-    });
-  });
-
   describe("Complex scenarios", () => {
     it("should handle nested elements", async () => {
       container.innerHTML = `

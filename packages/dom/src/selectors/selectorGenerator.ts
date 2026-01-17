@@ -24,12 +24,25 @@
 import type { ElementLocator } from "@auto-wiz/core";
 
 /**
+ * CSS-in-JS 클래스 간단 체크 (getSimpleSelector용)
+ */
+function isUnstableClass(className: string): boolean {
+  // CSS-in-JS 패턴들
+  if (/^css-[a-z0-9]+$/i.test(className)) return true;
+  if (/^sc-[a-zA-Z0-9]+$/.test(className)) return true;
+  if (/^_[a-zA-Z0-9_]+$/.test(className)) return true;
+  if (/[0-9a-f]{8,}/i.test(className)) return true;
+  if (/^chakra-/.test(className)) return true;
+  return false;
+}
+
+/**
  * 단순 selector 생성 (빠른 선택용)
  * ID가 있으면 ID만 사용, 없으면 전체 경로 생성
  */
 export function getSimpleSelector(el: Element): string {
   if (!(el instanceof Element)) return "";
-  if (el.id) return `#${CSS.escape(el.id)}`;
+  if (el.id && !el.id.match(/[0-9a-f]{8,}/i)) return `#${CSS.escape(el.id)}`;
 
   const parts: string[] = [];
   let node: Element | null = el;
@@ -38,11 +51,15 @@ export function getSimpleSelector(el: Element): string {
     let part = node.tagName.toLowerCase();
 
     if ((node as HTMLElement).classList.length > 0) {
-      const cls = Array.from((node as HTMLElement).classList)
-        .slice(0, 2)
-        .map((c) => `.${CSS.escape(c)}`)
-        .join("");
-      part += cls;
+      // CSS-in-JS 클래스 제외
+      const stableClasses = Array.from((node as HTMLElement).classList)
+        .filter((c) => !isUnstableClass(c))
+        .slice(0, 2);
+
+      if (stableClasses.length > 0) {
+        const cls = stableClasses.map((c) => `.${CSS.escape(c)}`).join("");
+        part += cls;
+      }
     }
 
     // nth-child
@@ -219,16 +236,33 @@ function getTestId(element: HTMLElement): string | null {
 }
 
 /**
+ * CSS-in-JS 라이브러리가 생성한 클래스인지 확인
+ */
+function isCssInJsClass(className: string): boolean {
+  // Emotion: css-xxxx, css-1abc2de
+  if (/^css-[a-z0-9]+$/i.test(className)) return true;
+  // Styled-components: sc-xxx, StyledXxx
+  if (/^sc-[a-zA-Z0-9]+$/.test(className)) return true;
+  // CSS Modules: _xxx_hash, Component_class__hash
+  if (/^_[a-zA-Z0-9_]+$/.test(className)) return true;
+  if (/^[A-Z][a-zA-Z]+_[a-zA-Z]+__[a-zA-Z0-9]+$/.test(className)) return true;
+  // Random hashes (8+ hex chars)
+  if (/[0-9a-f]{8,}/i.test(className)) return true;
+  // Chakra UI: chakra-xxx
+  if (/^chakra-/.test(className)) return true;
+
+  return false;
+}
+
+/**
  * CSS 클래스 기반 selector 생성 (고유한 클래스 우선)
  */
 function generateClassSelector(element: HTMLElement): string | null {
   const classes = Array.from(element.classList);
   if (classes.length === 0) return null;
 
-  // 고유해 보이는 클래스 우선 (숫자나 해시가 없는 것)
-  const stableClasses = classes.filter(
-    (c) => !c.match(/[0-9a-f]{8,}/) && !c.startsWith("_") 
-  );
+  // CSS-in-JS 클래스 제외, 안정적인 클래스만 사용
+  const stableClasses = classes.filter((c) => !isCssInJsClass(c));
 
   if (stableClasses.length > 0) {
     // 최대 2개 클래스 사용

@@ -3,6 +3,7 @@ import type { Step } from "@auto-wiz/core";
 import {
   getSimpleSelector,
   generateRobustLocator,
+  type ElementLocator,
 } from "@auto-wiz/dom";
 
 interface UseRecordingOptions {
@@ -95,7 +96,7 @@ export function useRecording({
     const masked = value ? "*".repeat(value.length) : "";
 
     // 요소를 찾아서 locator 생성
-    let locator;
+    let locator: ElementLocator | undefined;
     try {
       const element = document.querySelector(
         typingSelectorRef.current
@@ -105,10 +106,17 @@ export function useRecording({
       }
     } catch {}
 
+    // locator가 없으면 selector 기반으로 기본 locator 생성
+    if (!locator) {
+      locator = {
+        primary: typingSelectorRef.current,
+        fallbacks: [],
+      };
+    }
+
     const step: Step = {
       type: "type",
-      selector: typingSelectorRef.current, // 하위 호환성
-      locator, // 새로운 다중 selector 시스템
+      locator,
       text: masked,
       originalText: value,
       submit: typingSubmitRef.current || undefined,
@@ -182,13 +190,11 @@ export function useRecording({
     if (tag === "select" || tag === "option") return;
     if (el.closest("select")) return;
 
-    const selector = getSimpleSelector(el);
     const locator = generateRobustLocator(el);
 
     const step: Step = {
       type: "click",
-      selector, // 하위 호환성
-      locator, // 새로운 다중 selector 시스템
+      locator,
       url: window.location.href,
     };
 
@@ -210,18 +216,16 @@ export function useRecording({
 
       // select 요소 처리
       if (tag === "select") {
-        const selector = getSimpleSelector(el);
         const locator = generateRobustLocator(el);
         const value: string = el.value ?? "";
 
-        // 중복 방지
-        if (lastSelectValueRef.current[selector] === value) return;
-        lastSelectValueRef.current[selector] = value;
+        // 중복 방지 (primary selector 기준)
+        if (lastSelectValueRef.current[locator.primary] === value) return;
+        lastSelectValueRef.current[locator.primary] = value;
 
         const step: Step = {
           type: "select",
-          selector, // 하위 호환성
-          locator, // 새로운 다중 selector 시스템
+          locator,
           value,
           url: window.location.href,
         };
@@ -406,18 +410,16 @@ export function useRecording({
       const tag = el.tagName?.toLowerCase?.() || "";
       if (tag !== "select") return;
 
-      const selector = getSimpleSelector(el);
       const locator = generateRobustLocator(el);
       const value: string = el.value ?? "";
 
-      // 중복 방지
-      if (lastSelectValueRef.current[selector] === value) return;
-      lastSelectValueRef.current[selector] = value;
+      // 중복 방지 (primary selector 기준)
+      if (lastSelectValueRef.current[locator.primary] === value) return;
+      lastSelectValueRef.current[locator.primary] = value;
 
       const step: Step = {
         type: "select",
-        selector, // 하위 호환성
-        locator, // 새로운 다중 selector 시스템
+        locator,
         value,
         url: window.location.href,
       };

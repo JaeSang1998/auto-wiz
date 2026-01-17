@@ -1,14 +1,12 @@
-import type { Step } from "@auto-wiz/core";
-import { querySelector } from "../selectors/selectorGenerator";
+import type { Step, RunnerOptions } from "@auto-wiz/core";
 import { waitForLocator, isInteractable } from "../selectors/locatorUtils";
 
 /**
  * Step execution 유틸리티
  * 각 Step 타입별 실행 로직
- * 
- * 새로운 locator 시스템 지원:
- * - step.locator가 있으면 다중 selector fallback 사용
- * - 없으면 기존 step.selector 사용 (하위 호환성)
+ *
+ * locator 시스템 사용:
+ * - step.locator의 다중 selector fallback 사용
  */
 
 export interface ExecutionResult {
@@ -19,34 +17,27 @@ export interface ExecutionResult {
 }
 
 /**
- * Step에서 요소 찾기 (locator 우선, fallback to selector)
+ * Step에서 요소 찾기 (locator 시스템 사용)
  */
 async function findElement(step: Step): Promise<{
   element: HTMLElement | null;
   usedSelector: string;
 }> {
-  // 1. 새로운 locator 시스템 시도
-  if ("locator" in step && step.locator) {
-    try {
-      const element = await waitForLocator(step.locator, {
-        timeout: (step as any).timeoutMs || 5000,
-        visible: true,
-        interactable: true,
-      });
-      return { element, usedSelector: step.locator.primary };
-    } catch (error) {
-      // Locator로 찾지 못하면 selector로 폴백
-      console.warn("Locator failed, falling back to selector", error);
-    }
+  if (!("locator" in step) || !step.locator) {
+    return { element: null, usedSelector: "none" };
   }
 
-  // 2. 기존 selector 사용 (하위 호환성)
-  if ("selector" in step && step.selector) {
-    const element = querySelector(step.selector);
-    return { element, usedSelector: step.selector };
+  try {
+    const element = await waitForLocator(step.locator, {
+      timeout: (step as any).timeoutMs || 5000,
+      visible: true,
+      interactable: true,
+    });
+    return { element, usedSelector: step.locator.primary };
+  } catch (error) {
+    console.warn("Locator failed:", error);
+    return { element: null, usedSelector: step.locator.primary };
   }
-
-  return { element: null, usedSelector: "none" };
 }
 
 /**
@@ -86,9 +77,23 @@ export async function executeClickStep(step: Step): Promise<ExecutionResult> {
 }
 
 /**
+ * Resolve placeholders in text (e.g., {{username}} → variables.username)
+ */
+function resolveText(
+  text: string,
+  variables?: Record<string, string>
+): string {
+  if (!variables || !text) return text;
+  return text.replace(/\{\{(\w+)\}\}/g, (_, key) => variables[key] ?? "");
+}
+
+/**
  * Type step 실행
  */
-export async function executeTypeStep(step: Step): Promise<ExecutionResult> {
+export async function executeTypeStep(
+  step: Step,
+  options: RunnerOptions = {}
+): Promise<ExecutionResult> {
   if (step.type !== "type") {
     return { success: false, error: "Invalid type step" };
   }
@@ -120,7 +125,8 @@ export async function executeTypeStep(step: Step): Promise<ExecutionResult> {
   }
 
   try {
-    const text = step.originalText || step.text || "";
+    const rawText = step.originalText || step.text || "";
+    const text = resolveText(rawText, options.variables);
     element.value = text;
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
@@ -274,7 +280,7 @@ export async function executeWaitForStep(step: Step): Promise<ExecutionResult> {
   }
 
   // 단순 timeout인 경우
-  if (!("selector" in step) && !("locator" in step) && step.timeoutMs) {
+  if (!("locator" in step) && step.timeoutMs) {
     await new Promise((resolve) => setTimeout(resolve, step.timeoutMs));
     return { success: true };
   }
@@ -291,28 +297,9 @@ export async function executeWaitForStep(step: Step): Promise<ExecutionResult> {
       return { success: true, usedSelector: step.locator.primary };
     }
 
-    // selector가 있으면 기존 방식 (하위 호환성)
-    if ("selector" in step && step.selector) {
-      const startTime = Date.now();
-      const pollInterval = 100;
-
-      while (Date.now() - startTime < timeout) {
-        const element = querySelector(step.selector);
-        if (element) {
-          return { success: true, usedSelector: step.selector };
-        }
-        await new Promise((resolve) => setTimeout(resolve, pollInterval));
-      }
-
-      return {
-        success: false,
-        error: `Timeout waiting for element: ${step.selector}`,
-      };
-    }
-
     return {
       success: false,
-      error: "WaitFor step requires selector, locator, or timeoutMs",
+      error: "WaitFor step requires locator or timeoutMs",
     };
   } catch (error) {
     return {
@@ -325,13 +312,16 @@ export async function executeWaitForStep(step: Step): Promise<ExecutionResult> {
 /**
  * Step 실행 (타입에 따라 자동 분기)
  */
-export async function executeStep(step: Step): Promise<ExecutionResult> {
+export async function executeStep(
+  step: Step,
+  options: RunnerOptions = {}
+): Promise<ExecutionResult> {
   try {
     switch (step.type) {
       case "click":
         return await executeClickStep(step);
       case "type":
-        return await executeTypeStep(step);
+        return await executeTypeStep(step, options);
       case "select":
         return await executeSelectStep(step);
       case "extract":

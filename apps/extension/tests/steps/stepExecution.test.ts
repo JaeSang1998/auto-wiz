@@ -88,21 +88,18 @@ describe("Step Execution Logic", () => {
       button.style.display = "none"; // Make it hidden
       document.body.appendChild(button);
 
-      // Mock isInteractable to return false for hidden elements
-      // Note: isInteractable implementation might rely on getComputedStyle which happy-dom supports partially
-      // If happy-dom doesn't support full visibility check, we might need to rely on the implementation detail or mock it.
-      // However, stepExecution.ts imports isInteractable from locatorUtils.
+      // waitForLocator waits for visible/interactable elements, so hidden elements
+      // will timeout and return "Element not found" instead of "not interactable"
 
       const step: Step = {
         type: "click",
-        selector: "#hidden-button",
         locator: { primary: "#hidden-button", fallbacks: [] },
         timeoutMs: 100,
       };
 
       const result = await executeStep(step);
       expect(result.success).toBe(false);
-      expect(result.error).toContain("not interactable");
+      expect(result.error).toContain("Element not found");
     });
 
     it("should fail if element is disabled", async () => {
@@ -111,16 +108,18 @@ describe("Step Execution Logic", () => {
       button.disabled = true;
       document.body.appendChild(button);
 
+      // waitForLocator waits for interactable elements, so disabled elements
+      // will timeout and return "Element not found" instead of "not interactable"
+
       const step: Step = {
         type: "click",
-        selector: "#disabled-button",
         locator: { primary: "#disabled-button", fallbacks: [] },
         timeoutMs: 100,
       };
 
       const result = await executeStep(step);
       expect(result.success).toBe(false);
-      expect(result.error).toContain("not interactable");
+      expect(result.error).toContain("Element not found");
     });
 
     it("should trigger click event listeners", async () => {
@@ -134,8 +133,7 @@ describe("Step Execution Logic", () => {
 
       const step: Step = {
         type: "click",
-        selector: "#test-button",
-        locator: { primary: "#test-button", fallbacks: [] },
+                locator: { primary: "#test-button", fallbacks: [] },
       };
 
       const result = await executeStep(step);
@@ -347,8 +345,7 @@ describe("Step Execution Logic", () => {
 
       const step: Step = {
         type: "extract",
-        selector: "#parent",
-        locator: { primary: "#parent", fallbacks: [] },
+                locator: { primary: "#parent", fallbacks: [] },
         prop: "outerHTML",
         timeoutMs: 100
       };
@@ -382,8 +379,7 @@ Text
 
       const step: Step = {
         type: "extract",
-        selector: "#image-container",
-        locator: { primary: "#image-container", fallbacks: [] },
+                locator: { primary: "#image-container", fallbacks: [] },
         prop: "outerHTML",
         timeoutMs: 100
       };

@@ -19,6 +19,11 @@ export class PuppeteerFlowRunner implements FlowRunner<Page> {
 
     for (const [index, step] of flow.steps.entries()) {
       try {
+        // Step delay for debugging
+        if (options.stepDelay && index > 0) {
+          await new Promise((r) => setTimeout(r, options.stepDelay));
+        }
+
         const result = await this.runStep(step, page, options);
 
         if (!result.success) {
@@ -71,7 +76,9 @@ export class PuppeteerFlowRunner implements FlowRunner<Page> {
 
         case "type": {
           const el = await this.getElement(page, step, timeout);
-          const text = step.text || (step as any).originalText || "";
+          // originalText가 실제 값, text는 마스킹된 값
+          const rawText = (step as any).originalText || step.text || "";
+          const text = this.resolveText(rawText, options.variables);
           await el.type(text);
           if (step.submit) {
             await page.keyboard.press("Enter");
@@ -100,7 +107,7 @@ export class PuppeteerFlowRunner implements FlowRunner<Page> {
         }
 
         case "waitFor": {
-          if (step.selector || step.locator) {
+          if (step.locator) {
             const selector = this.getSelector(step);
             await page.waitForSelector(selector, {
               visible: true,
@@ -118,15 +125,23 @@ export class PuppeteerFlowRunner implements FlowRunner<Page> {
     }
   }
 
+  /**
+   * Resolve placeholders in text (e.g., {{username}} → variables.username)
+   */
+  private resolveText(
+    text: string,
+    variables?: Record<string, string>
+  ): string {
+    if (!variables || !text) return text;
+    return text.replace(/\{\{(\w+)\}\}/g, (_, key) => variables[key] ?? "");
+  }
+
   private getSelector(step: Step): string {
-    if ("locator" in step && step.locator) {
-      const { primary } = step.locator as ElementLocator;
-      return primary;
+    if (!("locator" in step) || !step.locator) {
+      throw new Error(`Step ${step.type} requires a locator`);
     }
-    if ("selector" in step && step.selector) {
-      return step.selector;
-    }
-    throw new Error(`Step ${step.type} requires a selector or locator`);
+    const { primary } = step.locator as ElementLocator;
+    return primary;
   }
 
   private async getElement(
