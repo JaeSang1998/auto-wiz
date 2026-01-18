@@ -71,7 +71,15 @@ type CoreStep =
       timeoutMs?: number;
     }
   | { type: "navigate"; url: string }
-  | { type: "waitForNavigation"; timeoutMs?: number };
+  | { type: "waitForNavigation"; timeoutMs?: number }
+  | {
+      type: "keyboard";
+      key: string; // 키 이름 (예: "Enter", "Tab", "Escape")
+      locator?: ElementLocator; // 포커스된 요소 (선택사항)
+      url?: string;
+      screenshot?: string;
+      timeoutMs?: number;
+    };
 
 // 각 스텝에 프레임 메타데이터를 선택적으로 포함
 export type Step = CoreStep & {
