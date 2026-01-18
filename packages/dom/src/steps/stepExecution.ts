@@ -17,10 +17,10 @@ export interface ExecutionResult {
 }
 
 /**
- * Step에서 요소 찾기 (locator 시스템 사용)
+ * Step에서 요소 찾기 (locator 시스템 사용) - HTMLElement와 SVGElement 모두 지원
  */
 async function findElement(step: Step): Promise<{
-  element: HTMLElement | null;
+  element: HTMLElement | SVGElement | null;
   usedSelector: string;
 }> {
   if (!("locator" in step) || !step.locator) {
@@ -65,7 +65,18 @@ export async function executeClickStep(step: Step): Promise<ExecutionResult> {
   }
 
   try {
-    element.click();
+    // HTMLElement는 click() 메서드 사용, SVGElement는 dispatchEvent 사용
+    if (element instanceof HTMLElement) {
+      element.click();
+    } else {
+      // SVGElement doesn't have click(), use dispatchEvent
+      const clickEvent = new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+      });
+      element.dispatchEvent(clickEvent);
+    }
     return { success: true, usedSelector };
   } catch (error) {
     return {
@@ -310,6 +321,109 @@ export async function executeWaitForStep(step: Step): Promise<ExecutionResult> {
 }
 
 /**
+ * Keyboard step 실행
+ */
+export async function executeKeyboardStep(step: Step): Promise<ExecutionResult> {
+  if (step.type !== "keyboard") {
+    return { success: false, error: "Invalid keyboard step" };
+  }
+
+  const key = step.key;
+  if (!key) {
+    return { success: false, error: "Keyboard step requires key" };
+  }
+
+  try {
+    // locator가 있으면 해당 요소에 포커스 후 키 이벤트 발생
+    let targetElement: Element | null = document.activeElement;
+    let usedSelector = "activeElement";
+
+    if ("locator" in step && step.locator) {
+      const { element, usedSelector: selector } = await findElement(step);
+      if (element) {
+        targetElement = element;
+        usedSelector = selector;
+        // HTMLElement만 focus() 메서드 지원
+        if (element instanceof HTMLElement) {
+          element.focus();
+        }
+      }
+    }
+
+    if (!targetElement) {
+      targetElement = document.body;
+      usedSelector = "body";
+    }
+
+    // 키보드 이벤트 발생
+    const keyCode = getKeyCode(key);
+    
+    targetElement.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key,
+        code: key === "Enter" ? "Enter" : key,
+        keyCode,
+        which: keyCode,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+
+    // Enter 키인 경우 폼 제출 시도
+    if (key === "Enter") {
+      const activeEl = document.activeElement;
+      if (activeEl instanceof HTMLInputElement || activeEl instanceof HTMLTextAreaElement) {
+        const form = activeEl.form;
+        if (form) {
+          if (typeof form.requestSubmit === "function") {
+            form.requestSubmit();
+          } else {
+            form.submit();
+          }
+        }
+      }
+    }
+
+    targetElement.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key,
+        code: key === "Enter" ? "Enter" : key,
+        keyCode,
+        which: keyCode,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+
+    return { success: true, usedSelector };
+  } catch (error) {
+    return {
+      success: false,
+      error: `Failed to execute keyboard step: ${(error as Error).message}`,
+    };
+  }
+}
+
+/**
+ * 키 이름을 keyCode로 변환
+ */
+function getKeyCode(key: string): number {
+  const keyCodes: Record<string, number> = {
+    Enter: 13,
+    Tab: 9,
+    Escape: 27,
+    Backspace: 8,
+    Delete: 46,
+    ArrowUp: 38,
+    ArrowDown: 40,
+    ArrowLeft: 37,
+    ArrowRight: 39,
+    Space: 32,
+  };
+  return keyCodes[key] || key.charCodeAt(0);
+}
+
+/**
  * Step 실행 (타입에 따라 자동 분기)
  */
 export async function executeStep(
@@ -330,6 +444,11 @@ export async function executeStep(
         return await executeWaitForStep(step);
       case "navigate":
         // navigate는 background에서 처리
+        return { success: true };
+      case "keyboard":
+        return await executeKeyboardStep(step);
+      case "waitForNavigation":
+        // waitForNavigation은 background에서 처리
         return { success: true };
       default:
         return { success: false, error: `Unknown step type: ${step.type}` };
