@@ -305,15 +305,15 @@ export function findByTestId(testId: string): HTMLElement | null {
 }
 
 /**
- * ElementLocator로 요소 찾기 (fallback 지원)
+ * ElementLocator로 요소 찾기 (fallback 지원) - HTMLElement와 SVGElement 모두 지원
  * 
  * Primary selector부터 시도하고, 실패하면 fallback들을 순차적으로 시도
  */
-export function findByLocator(locator: ElementLocator): HTMLElement | null {
+export function findByLocator(locator: ElementLocator): HTMLElement | SVGElement | null {
   // 1. Primary selector 시도
   try {
     const el = document.querySelector(locator.primary);
-    if (el instanceof HTMLElement && isVisible(el)) {
+    if ((el instanceof HTMLElement || el instanceof SVGElement) && isVisible(el)) {
       return el;
     }
   } catch (error) {
@@ -324,7 +324,7 @@ export function findByLocator(locator: ElementLocator): HTMLElement | null {
   for (const selector of locator.fallbacks) {
     try {
       const el = document.querySelector(selector);
-      if (el instanceof HTMLElement && isVisible(el)) {
+      if ((el instanceof HTMLElement || el instanceof SVGElement) && isVisible(el)) {
         return el;
       }
     } catch (error) {
@@ -385,9 +385,9 @@ export function findByLocator(locator: ElementLocator): HTMLElement | null {
 }
 
 /**
- * 요소가 화면에 보이는지 확인
+ * 요소가 화면에 보이는지 확인 - HTMLElement와 SVGElement 모두 지원
  */
-function isVisible(element: HTMLElement): boolean {
+function isVisible(element: HTMLElement | SVGElement): boolean {
   // BODY와 HTML은 항상 visible로 간주
   if (element.tagName === "BODY" || element.tagName === "HTML") {
     return true;
@@ -408,11 +408,12 @@ function isVisible(element: HTMLElement): boolean {
 }
 
 /**
- * 요소가 상호작용 가능한지 확인 (enabled + visible)
+ * 요소가 상호작용 가능한지 확인 (enabled + visible) - HTMLElement와 SVGElement 모두 지원
  */
-export function isInteractable(element: HTMLElement): boolean {
+export function isInteractable(element: HTMLElement | SVGElement): boolean {
   if (!isVisible(element)) return false;
 
+  // HTMLElement의 disabled 체크
   if (element instanceof HTMLInputElement || 
       element instanceof HTMLTextAreaElement || 
       element instanceof HTMLSelectElement || 
@@ -427,7 +428,7 @@ export function isInteractable(element: HTMLElement): boolean {
 }
 
 /**
- * Smart waiting: 요소가 나타날 때까지 대기
+ * Smart waiting: 요소가 나타날 때까지 대기 - HTMLElement와 SVGElement 모두 지원
  */
 export async function waitForLocator(
   locator: ElementLocator,
@@ -436,7 +437,7 @@ export async function waitForLocator(
     visible?: boolean;      // 보이는 요소만
     interactable?: boolean; // 상호작용 가능한 요소만
   }
-): Promise<HTMLElement> {
+): Promise<HTMLElement | SVGElement> {
   const timeout = options?.timeout || 5000;
   const startTime = Date.now();
   const pollInterval = 100;

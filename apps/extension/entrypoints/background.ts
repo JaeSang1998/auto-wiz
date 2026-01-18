@@ -35,6 +35,9 @@ async function saveFlow(flow: Flow): Promise<void> {
 let isRecording = false;
 let shouldStopRunning = false;
 
+// REC_STEP 메시지의 race condition 방지를 위한 큐 시스템
+let stepQueue: Promise<void> = Promise.resolve();
+
 // 메시지 핸들러
 browser.runtime.onMessage.addListener((msg: Message, sender, sendResponse) => {
   console.log("Background received message:", msg);
@@ -136,9 +139,10 @@ browser.runtime.onMessage.addListener((msg: Message, sender, sendResponse) => {
     return true;
   }
 
-  // 스텝 레코드
+  // 스텝 레코드 - 큐를 사용하여 직렬화 처리 (race condition 방지)
   if (msg.type === "REC_STEP") {
-    (async () => {
+    // 이전 작업이 완료된 후에 현재 작업 실행
+    stepQueue = stepQueue.then(async () => {
       const flow = await getFlow();
       const incoming = (msg as RecordStepMessage).step as Step;
       // 프레임 메타데이터 부착
@@ -165,8 +169,10 @@ browser.runtime.onMessage.addListener((msg: Message, sender, sendResponse) => {
           // 사이드패널이 열려있지 않으면 에러 발생 - 무시
         });
 
-      console.log("Step recorded:", flow.steps.length);
-    })();
+      console.log("Step recorded:", flow.steps.length, incoming.type);
+    }).catch((e) => {
+      console.error("Error recording step:", e);
+    });
     return true;
   }
 

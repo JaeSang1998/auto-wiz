@@ -134,12 +134,15 @@ export function isValidSelector(selector: string): boolean {
 }
 
 /**
- * Selector로 단일 요소 찾기 (안전)
+ * Selector로 단일 요소 찾기 (안전) - HTMLElement와 SVGElement 모두 지원
  */
-export function querySelector(selector: string): HTMLElement | null {
+export function querySelector(selector: string): HTMLElement | SVGElement | null {
   try {
     const el = document.querySelector(selector);
-    return el instanceof HTMLElement ? el : null;
+    if (el instanceof HTMLElement || el instanceof SVGElement) {
+      return el;
+    }
+    return null;
   } catch (error) {
     console.error(`Invalid selector: ${selector}`, error);
     return null;
@@ -147,13 +150,14 @@ export function querySelector(selector: string): HTMLElement | null {
 }
 
 /**
- * Selector로 여러 요소 찾기 (안전)
+ * Selector로 여러 요소 찾기 (안전) - HTMLElement와 SVGElement 모두 지원
  */
-export function querySelectorAll(selector: string): HTMLElement[] {
+export function querySelectorAll(selector: string): (HTMLElement | SVGElement)[] {
   try {
     const elements = document.querySelectorAll(selector);
     return Array.from(elements).filter(
-      (el): el is HTMLElement => el instanceof HTMLElement
+      (el): el is HTMLElement | SVGElement =>
+        el instanceof HTMLElement || el instanceof SVGElement
     );
   } catch (error) {
     console.error(`Invalid selector: ${selector}`, error);

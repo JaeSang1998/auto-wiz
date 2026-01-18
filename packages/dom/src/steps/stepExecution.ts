@@ -360,7 +360,7 @@ function formatXml(xml: string): string {
   // [^<]+ : 텍스트
   const tags = xml.match(/<[^>]+>|[^<]+/g) || [];
 
-  tags.forEach(tag => {
+  tags.forEach((tag) => {
     // 닫는 태그 </... >
     if (tag.match(/^<\//)) {
       indent = Math.max(0, indent - 1);
@@ -389,4 +389,3 @@ function formatXml(xml: string): string {
 
   return formatted.trim();
 }
-
