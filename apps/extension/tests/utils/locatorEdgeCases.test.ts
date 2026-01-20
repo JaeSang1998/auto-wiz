@@ -479,5 +479,210 @@ describe("Locator Edge Cases", () => {
       expect(locator.metadata?.text).toBeTruthy();
     });
   });
+
+  describe("Form with multiple similar inputs (sibling label pattern)", () => {
+    it("should capture labelText from sibling label element", () => {
+      container.innerHTML = `
+        <form class="space-y-4">
+          <div>
+            <label class="block text-sm mb-2">제품명</label>
+            <input type="text" class="w-full px-3 py-2 border" value="무선 마우스">
+          </div>
+          <div>
+            <label class="block text-sm mb-2">카테고리</label>
+            <input type="text" class="w-full px-3 py-2 border" value="전자제품">
+          </div>
+          <div>
+            <label class="block text-sm mb-2">재고 수량</label>
+            <input type="number" class="w-full px-3 py-2 border" value="15">
+          </div>
+        </form>
+      `;
+
+      const inputs = container.querySelectorAll("input");
+
+      // 제품명 input
+      const productLocator = generateRobustLocator(inputs[0] as HTMLInputElement);
+      expect(productLocator.metadata?.labelText).toBe("제품명");
+
+      // 카테고리 input
+      const categoryLocator = generateRobustLocator(inputs[1] as HTMLInputElement);
+      expect(categoryLocator.metadata?.labelText).toBe("카테고리");
+
+      // 재고 수량 input
+      const stockLocator = generateRobustLocator(inputs[2] as HTMLInputElement);
+      expect(stockLocator.metadata?.labelText).toBe("재고 수량");
+    });
+
+    it("should capture formContext for inputs in form", () => {
+      container.innerHTML = `
+        <form class="space-y-4">
+          <div>
+            <label class="block text-sm mb-2">제품명</label>
+            <input type="text" class="w-full px-3 py-2 border">
+          </div>
+          <div>
+            <label class="block text-sm mb-2">카테고리</label>
+            <input type="text" class="w-full px-3 py-2 border">
+          </div>
+          <div>
+            <label class="block text-sm mb-2">가격</label>
+            <input type="number" class="w-full px-3 py-2 border">
+          </div>
+        </form>
+      `;
+
+      const inputs = container.querySelectorAll("input");
+
+      // 첫 번째 input - fieldIndex 1
+      const firstLocator = generateRobustLocator(inputs[0] as HTMLInputElement);
+      expect(firstLocator.metadata?.formContext).toBeDefined();
+      expect(firstLocator.metadata?.formContext?.fieldIndex).toBe(1);
+
+      // 두 번째 input - fieldIndex 2
+      const secondLocator = generateRobustLocator(inputs[1] as HTMLInputElement);
+      expect(secondLocator.metadata?.formContext?.fieldIndex).toBe(2);
+
+      // 세 번째 input - fieldIndex 3
+      const thirdLocator = generateRobustLocator(inputs[2] as HTMLInputElement);
+      expect(thirdLocator.metadata?.formContext?.fieldIndex).toBe(3);
+    });
+
+    it("should find correct input using labelText metadata when multiple inputs match", () => {
+      container.innerHTML = `
+        <form class="space-y-4">
+          <div>
+            <label class="block text-sm mb-2">제품명</label>
+            <input type="text" class="w-full px-3 py-2 border">
+          </div>
+          <div>
+            <label class="block text-sm mb-2">카테고리</label>
+            <input type="text" class="w-full px-3 py-2 border">
+          </div>
+        </form>
+      `;
+
+      const inputs = container.querySelectorAll("input");
+      const categoryInput = inputs[1] as HTMLInputElement;
+
+      // 카테고리 input의 locator 생성
+      const locator = generateRobustLocator(categoryInput);
+
+      // findByLocator로 정확한 요소 찾기
+      const foundElement = findByLocator(locator);
+
+      expect(foundElement).toBe(categoryInput);
+    });
+
+    it("should differentiate inputs in same form by labelText", () => {
+      container.innerHTML = `
+        <form id="product-form">
+          <div>
+            <label>이름</label>
+            <input type="text" class="input-field">
+          </div>
+          <div>
+            <label>설명</label>
+            <input type="text" class="input-field">
+          </div>
+          <div>
+            <label>가격</label>
+            <input type="text" class="input-field">
+          </div>
+        </form>
+      `;
+
+      const inputs = container.querySelectorAll("input");
+
+      // 각 input의 locator 생성
+      const nameLocator = generateRobustLocator(inputs[0] as HTMLInputElement);
+      const descLocator = generateRobustLocator(inputs[1] as HTMLInputElement);
+      const priceLocator = generateRobustLocator(inputs[2] as HTMLInputElement);
+
+      // labelText로 구분되어야 함
+      expect(nameLocator.metadata?.labelText).toBe("이름");
+      expect(descLocator.metadata?.labelText).toBe("설명");
+      expect(priceLocator.metadata?.labelText).toBe("가격");
+
+      // 각 locator로 올바른 input을 찾아야 함
+      expect(findByLocator(nameLocator)).toBe(inputs[0]);
+      expect(findByLocator(descLocator)).toBe(inputs[1]);
+      expect(findByLocator(priceLocator)).toBe(inputs[2]);
+    });
+
+    it("should handle form with mixed input types", () => {
+      container.innerHTML = `
+        <form class="product-form">
+          <div>
+            <label>제품명</label>
+            <input type="text">
+          </div>
+          <div>
+            <label>수량</label>
+            <input type="number">
+          </div>
+          <div>
+            <label>메모</label>
+            <textarea></textarea>
+          </div>
+          <div>
+            <label>카테고리</label>
+            <select>
+              <option value="1">전자제품</option>
+              <option value="2">의류</option>
+            </select>
+          </div>
+        </form>
+      `;
+
+      const textInput = container.querySelector('input[type="text"]') as HTMLInputElement;
+      const numberInput = container.querySelector('input[type="number"]') as HTMLInputElement;
+      const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
+      const select = container.querySelector("select") as HTMLSelectElement;
+
+      const textLocator = generateRobustLocator(textInput);
+      const numberLocator = generateRobustLocator(numberInput);
+      const textareaLocator = generateRobustLocator(textarea);
+      const selectLocator = generateRobustLocator(select);
+
+      expect(textLocator.metadata?.labelText).toBe("제품명");
+      expect(numberLocator.metadata?.labelText).toBe("수량");
+      expect(textareaLocator.metadata?.labelText).toBe("메모");
+      expect(selectLocator.metadata?.labelText).toBe("카테고리");
+
+      // formContext도 있어야 함
+      expect(textLocator.metadata?.formContext?.fieldIndex).toBe(1);
+      expect(numberLocator.metadata?.formContext?.fieldIndex).toBe(2);
+      expect(textareaLocator.metadata?.formContext?.fieldIndex).toBe(3);
+      expect(selectLocator.metadata?.formContext?.fieldIndex).toBe(4);
+    });
+
+    it("should use formContext when labelText is not available", () => {
+      container.innerHTML = `
+        <form id="simple-form">
+          <input type="text" placeholder="First">
+          <input type="text" placeholder="Second">
+          <input type="text" placeholder="Third">
+        </form>
+      `;
+
+      const inputs = container.querySelectorAll("input");
+
+      // placeholder가 있는 경우
+      const firstLocator = generateRobustLocator(inputs[0] as HTMLInputElement);
+      const secondLocator = generateRobustLocator(inputs[1] as HTMLInputElement);
+
+      // labelText는 없지만 formContext는 있어야 함
+      expect(firstLocator.metadata?.labelText).toBeFalsy();
+      expect(firstLocator.metadata?.formContext?.fieldIndex).toBe(1);
+
+      expect(secondLocator.metadata?.labelText).toBeFalsy();
+      expect(secondLocator.metadata?.formContext?.fieldIndex).toBe(2);
+
+      // placeholder로 구분 가능
+      expect(firstLocator.metadata?.placeholder).toBe("First");
+      expect(secondLocator.metadata?.placeholder).toBe("Second");
+    });
+  });
 });
 

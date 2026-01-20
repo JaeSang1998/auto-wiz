@@ -18,6 +18,12 @@ export interface ElementLocator {
     ariaLabel?: string; // aria-label
     placeholder?: string; // placeholder 속성
     title?: string; // title 속성
+    labelText?: string; // 연결된 label 텍스트 (form input용)
+    formContext?: {
+      // form 내 위치 정보
+      formSelector?: string; // form의 selector
+      fieldIndex?: number; // form 내 input 순서 (1-based)
+    };
   };
 }
 
