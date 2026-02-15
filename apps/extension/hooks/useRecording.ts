@@ -1,10 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { ElementLocator, Step } from "@auto-wiz/core";
-import {
-  getSimpleSelector,
-  generateRobustLocator,
-  
-} from "@auto-wiz/dom";
+import { getSimpleSelector, generateRobustLocator } from "@auto-wiz/dom";
 
 interface UseRecordingOptions {
   autoCapture?: boolean;
@@ -26,9 +22,7 @@ interface UseRecordingReturn {
  * - Shift+Tab으로 extract
  * - 링크 클릭 시 새 탭 강제 방지
  */
-export function useRecording({
-  autoCapture = true,
-}: UseRecordingOptions = {}): UseRecordingReturn {
+export function useRecording({ autoCapture = true }: UseRecordingOptions = {}): UseRecordingReturn {
   const [recording, setRecording] = useState(false);
 
   // 타이핑 상태 관리 (ref로 최신 값 유지)
@@ -63,9 +57,7 @@ export function useRecording({
     // 요소를 찾아서 locator 생성
     let locator: ElementLocator | undefined;
     try {
-      const element = document.querySelector(
-        typingSelectorRef.current
-      ) as HTMLElement;
+      const element = document.querySelector(typingSelectorRef.current) as HTMLElement;
       if (element) {
         locator = generateRobustLocator(element);
       }
@@ -112,14 +104,12 @@ export function useRecording({
     if (el.closest("#automation-wizard-root")) return;
 
     // 링크 클릭 - 새 탭 열림을 same-tab 네비로 강제
-    const linkEl = (el.closest &&
-      el.closest("a[href]")) as HTMLAnchorElement | null;
+    const linkEl = (el.closest && el.closest("a[href]")) as HTMLAnchorElement | null;
 
     if (linkEl && linkEl.href) {
       const isMiddleClick = e.button === 1;
       const isModifierOpen = e.metaKey === true || e.ctrlKey === true;
-      const opensNewTab =
-        linkEl.target === "_blank" || isMiddleClick || isModifierOpen;
+      const opensNewTab = linkEl.target === "_blank" || isMiddleClick || isModifierOpen;
 
       if (opensNewTab) {
         try {
@@ -132,9 +122,7 @@ export function useRecording({
         } catch {}
 
         const navStep: Step = { type: "navigate", url: linkEl.href };
-        browser.runtime
-          .sendMessage({ type: "REC_STEP", step: navStep })
-          .catch(() => {});
+        browser.runtime.sendMessage({ type: "REC_STEP", step: navStep }).catch(() => {});
         return;
       }
     }
@@ -208,7 +196,7 @@ export function useRecording({
         flushTyping();
       }, 500);
     },
-    [autoCapture, flushTyping]
+    [autoCapture, flushTyping],
   );
 
   /**
@@ -425,7 +413,7 @@ export function useRecording({
         }
       }
     },
-    [autoCapture, flushTyping]
+    [autoCapture, flushTyping],
   );
 
   /**
@@ -474,7 +462,7 @@ export function useRecording({
 
       browser.runtime.sendMessage({ type: "REC_STEP", step }).catch(() => {});
     },
-    [autoCapture]
+    [autoCapture],
   );
 
   /**

@@ -2,6 +2,12 @@
   "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
     "allowImportingTsExtensions": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@auto-wiz/core": ["../../packages/core/src/index.ts"],
+      "@auto-wiz/dom": ["../../packages/dom/src/index.ts"],
+      "@auto-wiz/ui": ["../../packages/ui/src/index.ts"]
+    }
   }
 }

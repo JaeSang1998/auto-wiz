@@ -295,6 +295,39 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
           }
           break;
         }
+
+        case "keyboard": {
+          const key = step.key;
+          if (!key) {
+            return { success: false, error: "Keyboard step requires key" };
+          }
+          if (step.locator) {
+            const locator = await this.resolveLocator(page, step, timeout);
+            await locator.focus({ timeout });
+          }
+          await page.keyboard.press(key);
+          break;
+        }
+
+        case "waitForNavigation": {
+          const navTimeout = step.timeoutMs || timeout;
+          await page.waitForLoadState("domcontentloaded", {
+            timeout: navTimeout,
+          });
+          break;
+        }
+
+        case "screenshot": {
+          if (step.locator) {
+            const locator = await this.resolveLocator(page, step, timeout);
+            const buffer = await locator.screenshot({ type: "png" });
+            const base64 = buffer.toString("base64");
+            return { success: true, extractedData: base64 };
+          }
+          const buffer = await page.screenshot({ type: "png" });
+          const base64 = buffer.toString("base64");
+          return { success: true, extractedData: base64 };
+        }
       }
       return { success: true };
     } catch (error) {

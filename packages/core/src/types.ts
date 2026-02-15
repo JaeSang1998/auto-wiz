@@ -160,6 +160,10 @@ export type RecordStateUpdatedMessage = {
 };
 export type GetRecordStateMessage = { type: "GET_RECORD_STATE" };
 export type UndoLastStepMessage = { type: "UNDO_LAST_STEP" };
+export type UpdateLastStepSubmitMessage = {
+  type: "UPDATE_LAST_STEP_SUBMIT";
+  selector: string;
+};
 
 export type Message =
   | RecordStepMessage
@@ -178,4 +182,5 @@ export type Message =
   | PlayEventsToContentMessage
   | RecordStateUpdatedMessage
   | GetRecordStateMessage
-  | UndoLastStepMessage;
+  | UndoLastStepMessage
+  | UpdateLastStepSubmitMessage;

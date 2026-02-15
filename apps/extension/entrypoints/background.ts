@@ -64,11 +64,7 @@ browser.runtime.onMessage.addListener((msg: Message, sender, sendResponse) => {
       await Promise.all(
         tabs
           .filter((t) => t.id)
-          .map((t) =>
-            browser.tabs
-              .sendMessage(t.id!, { type: "RECORD_STATE", recording: true })
-              .catch(() => {})
-          )
+          .map((t) => browser.tabs.sendMessage(t.id!, { type: "RECORD_STATE", recording: true }).catch(() => {})),
       );
 
       // Sidepanel에도 상태 브로드캐스트
@@ -101,9 +97,7 @@ browser.runtime.onMessage.addListener((msg: Message, sender, sendResponse) => {
       if (flow.steps.length > 0) {
         flow.steps.pop();
         await saveFlow(flow);
-        browser.runtime
-          .sendMessage({ type: "FLOW_UPDATED", flow })
-          .catch(() => {});
+        browser.runtime.sendMessage({ type: "FLOW_UPDATED", flow }).catch(() => {});
       }
     })();
     return true;
@@ -117,11 +111,7 @@ browser.runtime.onMessage.addListener((msg: Message, sender, sendResponse) => {
       await Promise.all(
         tabs
           .filter((t) => t.id)
-          .map((t) =>
-            browser.tabs
-              .sendMessage(t.id!, { type: "RECORD_STATE", recording: false })
-              .catch(() => {})
-          )
+          .map((t) => browser.tabs.sendMessage(t.id!, { type: "RECORD_STATE", recording: false }).catch(() => {})),
       );
 
       // Sidepanel에도 상태 브로드캐스트
@@ -198,11 +188,7 @@ browser.runtime.onMessage.addListener((msg: Message, sender, sendResponse) => {
         await Promise.all(
           tabs
             .filter((t) => t.id)
-            .map((t) =>
-              browser.tabs
-                .sendMessage(t.id!, { type: "RECORD_STATE", recording: false })
-                .catch(() => {})
-            )
+            .map((t) => browser.tabs.sendMessage(t.id!, { type: "RECORD_STATE", recording: false }).catch(() => {})),
         );
       } catch {}
 
@@ -222,10 +208,7 @@ browser.runtime.onMessage.addListener((msg: Message, sender, sendResponse) => {
       // 실행 전, 첫 번째 스텝의 URL로 이동 (가능한 경우)
       try {
         const firstStep = flow.steps[0];
-        const firstUrl =
-          firstStep && "url" in firstStep && (firstStep as any).url
-            ? (firstStep as any).url
-            : undefined;
+        const firstUrl = firstStep && "url" in firstStep && (firstStep as any).url ? (firstStep as any).url : undefined;
         if (typeof firstUrl === "string" && firstUrl.startsWith("http")) {
           console.log(`Navigating to first step URL: ${firstUrl}`);
           await browser.tabs.update(targetTabId, {
@@ -287,10 +270,7 @@ browser.runtime.onMessage.addListener((msg: Message, sender, sendResponse) => {
 });
 
 // 탭 로드 완료 대기
-async function waitForTabLoaded(
-  tabId: number,
-  timeoutMs: number = 30000
-): Promise<void> {
+async function waitForTabLoaded(tabId: number, timeoutMs: number = 30000): Promise<void> {
   return new Promise((resolve, reject) => {
     const deadline = Date.now() + timeoutMs;
 
@@ -328,9 +308,7 @@ async function runFlowInTab(tabId: number, flow: Flow): Promise<void> {
   let startIndex = 0;
   if (flow.startUrl && steps.length > 0 && steps[0].type === "navigate") {
     startIndex = 1;
-    console.log(
-      "Skipping first navigate step as it was already executed during tab creation"
-    );
+    console.log("Skipping first navigate step as it was already executed during tab creation");
   }
 
   for (let i = startIndex; i < steps.length; i++) {
@@ -411,9 +389,7 @@ async function runFlowInTab(tabId: number, flow: Flow): Promise<void> {
           const currentUrlPath = currentUrlObj.origin + currentUrlObj.pathname;
 
           if (stepUrlPath !== currentUrlPath) {
-            console.log(
-              `URL mismatch: expected ${stepUrlPath}, got ${currentUrlPath}`
-            );
+            console.log(`URL mismatch: expected ${stepUrlPath}, got ${currentUrlPath}`);
             console.log("Navigating to step URL...");
 
             await browser.tabs.update(tabId, { url: step.url });
@@ -421,15 +397,10 @@ async function runFlowInTab(tabId: number, flow: Flow): Promise<void> {
             await new Promise((resolve) => setTimeout(resolve, 1000));
             console.log("Navigation to step URL completed");
           } else {
-            console.log(
-              `Same URL: ${stepUrlPath}, proceeding with current tab`
-            );
+            console.log(`Same URL: ${stepUrlPath}, proceeding with current tab`);
           }
         } catch (error) {
-          console.warn(
-            "URL parsing error, proceeding with current tab:",
-            error
-          );
+          console.warn("URL parsing error, proceeding with current tab:", error);
         }
       }
 
@@ -485,11 +456,7 @@ async function runFlowInTab(tabId: number, flow: Flow): Promise<void> {
           // Don't reject immediately on timeout here if we want to rely on the runner's internal timeout?
           // The runner (DomFlowRunner) in content.tsx has its own timeout logic for waitFor/etc.
           // But if the message is never sent (e.g. content script crash), we need this.
-          reject(
-            new Error(
-              "Timeout waiting for step completion response from content script"
-            )
-          );
+          reject(new Error("Timeout waiting for step completion response from content script"));
         }, timeoutMs + 2000);
       });
 
@@ -527,8 +494,7 @@ async function runFlowInTab(tabId: number, flow: Flow): Promise<void> {
       console.error(`Step ${i + 1} failed:`, error);
 
       // 스텝 실패 알림
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.log(`Sending step failure notification: ${errorMessage}`);
 
       try {
@@ -638,9 +604,7 @@ export default defineBackground(() => {
   browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (changeInfo.status === "complete") {
       if (isRecording) {
-        browser.tabs
-          .sendMessage(tabId, { type: "RECORD_STATE", recording: true })
-          .catch(() => {});
+        browser.tabs.sendMessage(tabId, { type: "RECORD_STATE", recording: true }).catch(() => {});
       }
     }
   });
