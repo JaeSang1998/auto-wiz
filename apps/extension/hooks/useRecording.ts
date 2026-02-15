@@ -1,10 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import type { Step } from "@auto-wiz/core";
-import {
-  getSimpleSelector,
-  generateRobustLocator,
-  type ElementLocator,
-} from "@auto-wiz/dom";
+import type { ElementLocator, Step } from "@auto-wiz/core";
+import { getSimpleSelector, generateRobustLocator } from "@auto-wiz/dom";
 
 interface UseRecordingOptions {
   autoCapture?: boolean;
@@ -26,9 +22,7 @@ interface UseRecordingReturn {
  * - Shift+Tab으로 extract
  * - 링크 클릭 시 새 탭 강제 방지
  */
-export function useRecording({
-  autoCapture = true,
-}: UseRecordingOptions = {}): UseRecordingReturn {
+export function useRecording({ autoCapture = true }: UseRecordingOptions = {}): UseRecordingReturn {
   const [recording, setRecording] = useState(false);
 
   // 타이핑 상태 관리 (ref로 최신 값 유지)
@@ -63,9 +57,7 @@ export function useRecording({
     // 요소를 찾아서 locator 생성
     let locator: ElementLocator | undefined;
     try {
-      const element = document.querySelector(
-        typingSelectorRef.current
-      ) as HTMLElement;
+      const element = document.querySelector(typingSelectorRef.current) as HTMLElement;
       if (element) {
         locator = generateRobustLocator(element);
       }
@@ -102,6 +94,9 @@ export function useRecording({
   const handleClick = useCallback((e: MouseEvent) => {
     if (!recordingRef.current) return;
 
+    // ✅ 클릭 전에 대기 중인 타이핑 먼저 플러시 (debounce 타이머 만료 전 입력 손실 방지)
+    flushTyping();
+
     const el = e.target as HTMLElement | null;
     if (!el) return;
 
@@ -109,14 +104,12 @@ export function useRecording({
     if (el.closest("#automation-wizard-root")) return;
 
     // 링크 클릭 - 새 탭 열림을 same-tab 네비로 강제
-    const linkEl = (el.closest &&
-      el.closest("a[href]")) as HTMLAnchorElement | null;
+    const linkEl = (el.closest && el.closest("a[href]")) as HTMLAnchorElement | null;
 
     if (linkEl && linkEl.href) {
       const isMiddleClick = e.button === 1;
       const isModifierOpen = e.metaKey === true || e.ctrlKey === true;
-      const opensNewTab =
-        linkEl.target === "_blank" || isMiddleClick || isModifierOpen;
+      const opensNewTab = linkEl.target === "_blank" || isMiddleClick || isModifierOpen;
 
       if (opensNewTab) {
         try {
@@ -129,9 +122,7 @@ export function useRecording({
         } catch {}
 
         const navStep: Step = { type: "navigate", url: linkEl.href };
-        browser.runtime
-          .sendMessage({ type: "REC_STEP", step: navStep })
-          .catch(() => {});
+        browser.runtime.sendMessage({ type: "REC_STEP", step: navStep }).catch(() => {});
         return;
       }
     }
@@ -150,7 +141,7 @@ export function useRecording({
     };
 
     browser.runtime.sendMessage({ type: "REC_STEP", step }).catch(() => {});
-  }, []);
+  }, [flushTyping]);
 
   /**
    * Input 이벤트 핸들러 (타이핑, Select)
@@ -192,6 +183,8 @@ export function useRecording({
       const selector = getSimpleSelector(el);
       const value: string = el.value ?? "";
 
+      console.log(`📝 handleInput: tag=${tag}, value.length=${value.length}, selector=${selector}`);
+
       typingSelectorRef.current = selector;
       typingValueRef.current = value;
 
@@ -203,7 +196,7 @@ export function useRecording({
         flushTyping();
       }, 500);
     },
-    [autoCapture, flushTyping]
+    [autoCapture, flushTyping],
   );
 
   /**
@@ -218,90 +211,223 @@ export function useRecording({
         const tag = active?.tagName?.toLowerCase();
         const isTextField = active && (tag === "input" || tag === "textarea");
 
-        // textarea는 Enter가 줄바꿈이므로 submit 하지 않음
+        // ✅ textarea 결과 관찰 방식: Enter 후 줄바꿈인지 제출인지 판단
         if (tag === "textarea") {
-          return;
+          const beforeValue = active.value || "";
+          const beforeLength = beforeValue.length;
+
+          // 1. 현재 활성 요소의 값을 직접 가져와서 type step 기록
+          const currentTextareaValue = active.value ?? "";
+          if (currentTextareaValue) {
+            // 타이머 정리
+            if (typingTimerRef.current) {
+              window.clearTimeout(typingTimerRef.current);
+              typingTimerRef.current = null;
+            }
+
+            const textareaSelector = getSimpleSelector(active);
+            const textareaLocator = generateRobustLocator(active);
+            const textareaMasked = "*".repeat(currentTextareaValue.length);
+
+            const typeStep: Step = {
+              type: "type",
+              locator: textareaLocator,
+              text: textareaMasked,
+              originalText: currentTextareaValue,
+              url: window.location.href,
+            };
+
+            console.log("✅ Recording type step before Enter in textarea:", typeStep);
+            browser.runtime
+              .sendMessage({ type: "REC_STEP", step: typeStep })
+              .catch(() => {});
+          }
+
+          // 기존 타이핑 ref 초기화 (중복 방지)
+          typingSelectorRef.current = null;
+          typingValueRef.current = "";
+
+          // 2. Enter 키 이벤트는 그대로 전파 (preventDefault 안 함)
+
+          // 3. 50ms 후 결과 관찰
+          setTimeout(() => {
+            try {
+              const afterValue = active.value || "";
+
+              // 줄바꿈 판정: value에 \n이 새로 추가됨
+              const hasNewNewline =
+                afterValue.length > beforeLength &&
+                afterValue.includes("\n") &&
+                !beforeValue.endsWith("\n");
+
+              if (hasNewNewline) {
+                console.log(
+                  "⏭️ Enter caused newline in textarea, skipping keyboard step"
+                );
+                return; // 줄바꿈이면 기록 안 함
+              }
+
+              // 제출 판정: value가 비워졌거나 변화 없음
+              console.log(
+                "✅ Enter caused submit in textarea, recording keyboard step"
+              );
+
+              const textareaKeySelector = getSimpleSelector(active);
+              const textareaKeyLocator = generateRobustLocator(active);
+
+              const step: Step = {
+                type: "keyboard",
+                key: "Enter",
+                selector: textareaKeySelector,
+                locator: textareaKeyLocator,
+                url: window.location.href,
+              } as any;
+
+              browser.runtime
+                .sendMessage({ type: "REC_STEP", step })
+                .catch(() => {});
+            } catch (err) {
+              console.error("Failed to record keyboard step:", err);
+            }
+          }, 50);
+
+          return; // Enter 이벤트는 계속 전파
         }
 
-        // 입력 필드에서의 Enter 제출을 가로채서 먼저 기록하고, 그 다음 프로그램적으로 제출
-        if (isTextField) {
-          try {
-            e.preventDefault();
-            e.stopPropagation();
-          } catch {}
+        // ✅ input 필드에서 Enter 처리 (기존 로직)
+        if (tag === "input" && isTextField) {
+          console.log(`✅ Enter key detected in ${tag} field`);
 
-          // 기존 타이핑 타이머를 먼저 정리 (중복 레코딩 방지)
+          // typingValueRef가 비어있어도 active.value로 fallback
+          const pendingValue = typingValueRef.current;
+          const elementValue = active.value ?? "";
+          const valueToRecord = pendingValue || elementValue;
+          
+          console.log(`🔍 Enter handler: pendingValue="${pendingValue}", elementValue="${elementValue}", valueToRecord="${valueToRecord}"`);
+          
+          // 타이머 및 refs 먼저 정리 (focusout 중복 방지)
           if (typingTimerRef.current) {
             window.clearTimeout(typingTimerRef.current);
             typingTimerRef.current = null;
           }
+          typingSelectorRef.current = null;
+          typingValueRef.current = "";
 
-          typingSubmitRef.current = true;
+          // type step 기록 (값이 있는 경우)
+          if (valueToRecord) {
+            const currentSelector = getSimpleSelector(active);
+            const locator = generateRobustLocator(active);
+            const masked = "*".repeat(valueToRecord.length);
 
-          // active가 존재하면 selector 갱신 보조
-          try {
-            if (!typingSelectorRef.current) {
-              typingSelectorRef.current = getSimpleSelector(active);
-              typingValueRef.current = active.value ?? "";
-            }
-          } catch {}
+            const typeStep: Step = {
+              type: "type",
+              locator,
+              text: masked,
+              originalText: valueToRecord,
+              url: window.location.href,
+            };
 
-          flushTyping();
+            console.log("✅ Recording type step before Enter:", typeStep);
+            browser.runtime
+              .sendMessage({ type: "REC_STEP", step: typeStep })
+              .catch(() => {});
+          }
 
-          // 메시지 전송 시간을 조금 주고 제출 재현
+          // keyboard step 기록
+          const keyboardSelector = getSimpleSelector(active);
+          const keyboardLocator = generateRobustLocator(active);
+
+          const keyboardStep: Step = {
+            type: "keyboard",
+            key: "Enter",
+            selector: keyboardSelector,
+            locator: keyboardLocator,
+            url: window.location.href,
+          } as any;
+
+          console.log(`✅ Recording keyboard step (Enter in ${tag}):`, keyboardStep);
+          browser.runtime
+            .sendMessage({ type: "REC_STEP", step: keyboardStep })
+            .catch(() => {});
+
+          // 3. 폼 제출 실행
           setTimeout(() => {
             try {
               const form = active.form;
               if (form) {
                 if (typeof form.requestSubmit === "function") {
+                  console.log("✅ Calling form.requestSubmit()");
                   form.requestSubmit();
                 } else {
+                  console.log("✅ Calling form.submit()");
                   form.submit();
                 }
               } else {
-                // 폼이 없을 때 Enter 키 이벤트 재현
-                const enterDown = new KeyboardEvent("keydown", {
-                  key: "Enter",
-                  code: "Enter",
-                  keyCode: 13,
-                  which: 13,
-                  bubbles: true,
-                  cancelable: true,
-                });
-                const enterPress = new KeyboardEvent("keypress", {
-                  key: "Enter",
-                  code: "Enter",
-                  keyCode: 13,
-                  which: 13,
-                  bubbles: true,
-                  cancelable: true,
-                });
-                const enterUp = new KeyboardEvent("keyup", {
-                  key: "Enter",
-                  code: "Enter",
-                  keyCode: 13,
-                  which: 13,
-                  bubbles: true,
-                  cancelable: true,
-                });
-                active.dispatchEvent(enterDown);
-                active.dispatchEvent(enterPress);
-                active.dispatchEvent(enterUp);
+                console.log(
+                  "⚠️ No form found, Enter key will propagate naturally"
+                );
               }
+            } catch (err) {
+              console.error("❌ Form submit error:", err);
+            }
+          }, 50);
+
+          // preventDefault (폼이 있는 경우만)
+          if (active.form) {
+            try {
+              e.preventDefault();
+              e.stopPropagation();
             } catch {}
-          }, 80);
+          }
           return;
+        }
+
+        // ✅ 입력 필드 외부에서 Enter (버튼, 링크 등)
+        try {
+          let selector = null;
+          let locator = null;
+
+          if (
+            active &&
+            active instanceof HTMLElement &&
+            !active.closest("#automation-wizard-root")
+          ) {
+            selector = getSimpleSelector(active);
+            locator = generateRobustLocator(active);
+          }
+
+          const step: Step = {
+            type: "keyboard",
+            key: "Enter",
+            selector: selector || undefined,
+            locator: locator || undefined,
+            url: window.location.href,
+          } as any;
+
+          console.log("✅ Recording keyboard step (Enter on element):", step);
+          browser.runtime
+            .sendMessage({ type: "REC_STEP", step })
+            .catch(() => {});
+        } catch (err) {
+          console.error("Failed to record keyboard step:", err);
         }
       }
     },
-    [autoCapture, flushTyping]
+    [autoCapture, flushTyping],
   );
 
   /**
-   * Blur 이벤트 - 타이핑 플러시
+   * FocusOut 이벤트 - 입력 필드에서 포커스 이탈 시 타이핑 플러시
+   * (window.blur는 탭 이탈에만 동작하므로, document.focusout으로 변경)
    */
-  const handleBlur = useCallback(() => {
-    if (recordingRef.current && autoCapture) {
+  const handleFocusOut = useCallback((e: FocusEvent) => {
+    if (!recordingRef.current || !autoCapture) return;
+
+    const el = e.target as HTMLElement;
+    if (!el) return;
+
+    const tag = el.tagName?.toLowerCase();
+    if (tag === "input" || tag === "textarea") {
       flushTyping();
     }
   }, [autoCapture, flushTyping]);
@@ -336,7 +462,7 @@ export function useRecording({
 
       browser.runtime.sendMessage({ type: "REC_STEP", step }).catch(() => {});
     },
-    [autoCapture]
+    [autoCapture],
   );
 
   /**
@@ -367,14 +493,14 @@ export function useRecording({
     document.addEventListener("click", handleClick, true);
     document.addEventListener("input", handleInput, true);
     document.addEventListener("keydown", handleKeydownGlobal, true);
-    window.addEventListener("blur", handleBlur, true);
+    document.addEventListener("focusout", handleFocusOut, true);
     document.addEventListener("change", handleChange, true);
 
     return () => {
       document.removeEventListener("click", handleClick, true);
       document.removeEventListener("input", handleInput, true);
       document.removeEventListener("keydown", handleKeydownGlobal, true);
-      window.removeEventListener("blur", handleBlur, true);
+      document.removeEventListener("focusout", handleFocusOut, true);
       document.removeEventListener("change", handleChange, true);
     };
   }, [
@@ -382,7 +508,7 @@ export function useRecording({
     handleClick,
     handleInput,
     handleKeydownGlobal,
-    handleBlur,
+    handleFocusOut,
     handleChange,
   ]);
 

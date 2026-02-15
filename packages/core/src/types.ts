@@ -18,6 +18,12 @@ export interface ElementLocator {
     ariaLabel?: string; // aria-label
     placeholder?: string; // placeholder 속성
     title?: string; // title 속성
+    labelText?: string; // 연결된 label 텍스트 (form input용)
+    formContext?: {
+      // form 내 위치 정보
+      formSelector?: string; // form의 selector
+      fieldIndex?: number; // form 내 input 순서 (1-based)
+    };
   };
 }
 
@@ -71,7 +77,15 @@ type CoreStep =
       timeoutMs?: number;
     }
   | { type: "navigate"; url: string }
-  | { type: "waitForNavigation"; timeoutMs?: number };
+  | { type: "waitForNavigation"; timeoutMs?: number }
+  | {
+      type: "keyboard";
+      key: string; // 키 이름 (예: "Enter", "Tab", "Escape")
+      locator?: ElementLocator; // 포커스된 요소 (선택사항)
+      url?: string;
+      screenshot?: string;
+      timeoutMs?: number;
+    };
 
 // 각 스텝에 프레임 메타데이터를 선택적으로 포함
 export type Step = CoreStep & {
@@ -146,6 +160,10 @@ export type RecordStateUpdatedMessage = {
 };
 export type GetRecordStateMessage = { type: "GET_RECORD_STATE" };
 export type UndoLastStepMessage = { type: "UNDO_LAST_STEP" };
+export type UpdateLastStepSubmitMessage = {
+  type: "UPDATE_LAST_STEP_SUBMIT";
+  selector: string;
+};
 
 export type Message =
   | RecordStepMessage
@@ -164,4 +182,5 @@ export type Message =
   | PlayEventsToContentMessage
   | RecordStateUpdatedMessage
   | GetRecordStateMessage
-  | UndoLastStepMessage;
+  | UndoLastStepMessage
+  | UpdateLastStepSubmitMessage;

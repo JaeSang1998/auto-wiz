@@ -50,6 +50,8 @@ export function FlowStepItem({
         return <MousePointer2 {...iconProps} />;
       case "type":
         return <Keyboard {...iconProps} />;
+      case "keyboard":
+        return <Keyboard {...iconProps} />;
       case "select":
         return <ListChecks {...iconProps} />;
       case "extract":
@@ -69,6 +71,8 @@ export function FlowStepItem({
         return "Click";
       case "type":
         return "Type";
+      case "keyboard":
+        return "Enter";
       case "select":
         return "Select";
       case "extract":
@@ -190,6 +194,9 @@ export function FlowStepItem({
             : textToShow;
         return `Type "${displayText}"${elementDesc ? ` into ${elementDesc}` : ""
           }${step.submit ? " ⏎" : ""}`;
+      case "keyboard":
+        const key = (step as any).key || "key";
+        return elementDesc ? `Press ${key} on ${elementDesc}` : `Press ${key}`;
       case "select":
         return `Select "${step.value}"${elementDesc ? ` from ${elementDesc}` : ""
           }`;

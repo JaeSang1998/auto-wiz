@@ -134,12 +134,15 @@ export function isValidSelector(selector: string): boolean {
 }
 
 /**
- * Selector로 단일 요소 찾기 (안전)
+ * Selector로 단일 요소 찾기 (안전) - HTMLElement와 SVGElement 모두 지원
  */
-export function querySelector(selector: string): HTMLElement | null {
+export function querySelector(selector: string): HTMLElement | SVGElement | null {
   try {
     const el = document.querySelector(selector);
-    return el instanceof HTMLElement ? el : null;
+    if (el instanceof HTMLElement || el instanceof SVGElement) {
+      return el;
+    }
+    return null;
   } catch (error) {
     console.error(`Invalid selector: ${selector}`, error);
     return null;
@@ -147,13 +150,14 @@ export function querySelector(selector: string): HTMLElement | null {
 }
 
 /**
- * Selector로 여러 요소 찾기 (안전)
+ * Selector로 여러 요소 찾기 (안전) - HTMLElement와 SVGElement 모두 지원
  */
-export function querySelectorAll(selector: string): HTMLElement[] {
+export function querySelectorAll(selector: string): (HTMLElement | SVGElement)[] {
   try {
     const elements = document.querySelectorAll(selector);
     return Array.from(elements).filter(
-      (el): el is HTMLElement => el instanceof HTMLElement
+      (el): el is HTMLElement | SVGElement =>
+        el instanceof HTMLElement || el instanceof SVGElement
     );
   } catch (error) {
     console.error(`Invalid selector: ${selector}`, error);
@@ -274,6 +278,99 @@ function generateClassSelector(element: HTMLElement): string | null {
 }
 
 /**
+ * Input 요소와 연결된 label 텍스트 가져오기
+ * 다양한 label 연결 방식 지원:
+ * 1. label[for="id"] - 명시적 연결
+ * 2. 부모 label - 암시적 연결
+ * 3. aria-labelledby - ARIA 연결
+ * 4. 이전 형제 label - div > label + input 구조
+ * 5. 같은 컨테이너 내 label - div 내 첫 번째 label
+ */
+function getAssociatedLabelText(
+  element: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+): string | null {
+  // 1. label[for="id"] 방식 (명시적 연결)
+  if (element.id) {
+    const label = document.querySelector(`label[for="${CSS.escape(element.id)}"]`);
+    if (label) return label.textContent?.trim() || null;
+  }
+
+  // 2. 부모 label 방식 (암시적 연결)
+  const parentLabel = element.closest("label");
+  if (parentLabel) {
+    // input 자체의 텍스트는 제외하고 label 텍스트만 추출
+    const clone = parentLabel.cloneNode(true) as HTMLElement;
+    const input = clone.querySelector("input, textarea, select");
+    if (input) input.remove();
+    const text = clone.textContent?.trim();
+    if (text) return text;
+  }
+
+  // 3. aria-labelledby 방식
+  const labelledby = element.getAttribute("aria-labelledby");
+  if (labelledby) {
+    const labelEl = document.getElementById(labelledby);
+    if (labelEl) return labelEl.textContent?.trim() || null;
+  }
+
+  // 4. 이전 형제 label 탐지 (div > label + input 구조)
+  const prevSibling = element.previousElementSibling;
+  if (prevSibling && prevSibling.tagName.toLowerCase() === "label") {
+    return prevSibling.textContent?.trim() || null;
+  }
+
+  // 5. 같은 컨테이너(div) 내 첫 번째 label
+  const parent = element.parentElement;
+  if (parent) {
+    const labelInParent = parent.querySelector("label");
+    if (labelInParent) {
+      // 해당 label이 다른 input과 연결되어 있지 않은지 확인
+      const forAttr = labelInParent.getAttribute("for");
+      if (!forAttr || forAttr === element.id) {
+        return labelInParent.textContent?.trim() || null;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Form 내에서의 위치 정보 가져오기
+ */
+function getFormContext(
+  element: HTMLElement
+): { formSelector: string; fieldIndex: number } | null {
+  const form = element.closest("form");
+  if (!form) return null;
+
+  // Form의 selector 생성 (id, name, 또는 구조적)
+  let formSelector = "";
+  if (form.id && !form.id.match(/[0-9a-f]{8,}/i)) {
+    formSelector = `#${CSS.escape(form.id)}`;
+  } else if (form.getAttribute("name")) {
+    formSelector = `form[name="${form.getAttribute("name")}"]`;
+  } else {
+    // form의 클래스 기반 selector 시도
+    const formClassSelector = generateClassSelector(form);
+    if (formClassSelector) {
+      formSelector = formClassSelector;
+    } else {
+      // 여러 form이 있을 경우 구조적 selector
+      const forms = document.querySelectorAll("form");
+      const index = Array.from(forms).indexOf(form);
+      formSelector = `form:nth-of-type(${index + 1})`;
+    }
+  }
+
+  // Form 내에서 모든 input/textarea/select 요소 중 순서 계산
+  const allFormFields = form.querySelectorAll("input, textarea, select");
+  const fieldIndex = Array.from(allFormFields).indexOf(element) + 1;
+
+  return { formSelector, fieldIndex };
+}
+
+/**
  * Robust한 다중 selector 생성 (Playwright/Maestro 스타일)
  */
 export function generateRobustLocator(element: HTMLElement): ElementLocator {
@@ -342,6 +439,31 @@ export function generateRobustLocator(element: HTMLElement): ElementLocator {
   // Alt (이미지)
   if (element instanceof HTMLImageElement && element.alt) {
     selectors.push(`img[alt="${element.alt}"]`);
+  }
+
+  // === Form Input 특화: Label 텍스트 및 Form Context ===
+  if (
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement ||
+    element instanceof HTMLSelectElement
+  ) {
+    // Label 텍스트 추출
+    const labelText = getAssociatedLabelText(element);
+    if (labelText) {
+      metadata.labelText = labelText;
+    }
+
+    // Form 내 위치 정보
+    const formContext = getFormContext(element);
+    if (formContext) {
+      metadata.formContext = formContext;
+      // Form context 기반 selector 추가 (fallback용)
+      selectors.push(
+        `${formContext.formSelector} :nth-child(${formContext.fieldIndex}) input, ` +
+          `${formContext.formSelector} :nth-child(${formContext.fieldIndex}) textarea, ` +
+          `${formContext.formSelector} :nth-child(${formContext.fieldIndex}) select`
+      );
+    }
   }
 
   // === Tier 3: 구조적 selector ===

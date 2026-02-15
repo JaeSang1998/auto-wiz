@@ -7,7 +7,7 @@ import {
   type Step,
   type ElementLocator,
 } from "@auto-wiz/core";
-import { Page, ElementHandle } from "puppeteer";
+import { Page, ElementHandle, KeyInput } from "puppeteer";
 
 export class PuppeteerFlowRunner implements FlowRunner<Page> {
   async run(
@@ -117,6 +117,38 @@ export class PuppeteerFlowRunner implements FlowRunner<Page> {
             await new Promise((r) => setTimeout(r, step.timeoutMs));
           }
           break;
+        }
+
+        case "keyboard": {
+          const key = step.key;
+          if (!key) {
+            return { success: false, error: "Keyboard step requires key" };
+          }
+          if (step.locator) {
+            const el = await this.getElement(page, step, timeout);
+            await el.focus();
+          }
+          await page.keyboard.press(key as KeyInput);
+          break;
+        }
+
+        case "waitForNavigation": {
+          const navTimeout = step.timeoutMs || timeout;
+          await page.waitForNavigation({
+            waitUntil: "domcontentloaded",
+            timeout: navTimeout,
+          });
+          break;
+        }
+
+        case "screenshot": {
+          if (step.locator) {
+            const el = await this.getElement(page, step, timeout);
+            const base64 = await el.screenshot({ encoding: "base64" });
+            return { success: true, extractedData: base64 as string };
+          }
+          const base64 = await page.screenshot({ encoding: "base64" });
+          return { success: true, extractedData: base64 as string };
         }
       }
       return { success: true };
