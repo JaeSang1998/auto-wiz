@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies [329c960]
+  - @auto-wiz/dom@1.1.3
+
 ## 0.0.4
 
 ### Patch Changes
