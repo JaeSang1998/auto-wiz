@@ -9,6 +9,21 @@ import {
 } from "@auto-wiz/core";
 import { Page, Locator } from "playwright";
 
+const MIN_CONFIDENCE_SCORE = 80;
+const LOCATOR_POLL_INTERVAL_MS = 100;
+
+type CandidateMetadata = ElementLocator["metadata"];
+
+type CandidateInfo = {
+  selector: string;
+  selectorOrder: number;
+  elementIndex: number;
+  score: number;
+  visible: boolean;
+  interactable: boolean;
+  domPath: string;
+};
+
 export class PlaywrightFlowRunner implements FlowRunner<Page> {
   async run(
     flow: Flow,
@@ -355,48 +370,331 @@ export class PlaywrightFlowRunner implements FlowRunner<Page> {
       throw new Error(`Step ${step.type} requires a locator`);
     }
 
-    const { primary, fallbacks = [] } = step.locator as ElementLocator;
+    const { primary, fallbacks = [], metadata } = step.locator as ElementLocator;
     const candidates = [primary, ...fallbacks];
 
     if (candidates.length === 0) {
       throw new Error(`Step ${step.type} has no valid selectors`);
     }
 
-    // If only one candidate, just return it (Playwright's default behavior)
-    if (candidates.length === 1) {
-      return page.locator(candidates[0]).first();
+    const startedAt = Date.now();
+    let lastError = "No candidates found";
+
+    while (Date.now() - startedAt < timeout) {
+      const resolved = await this.pickBestCandidate(
+        page,
+        candidates,
+        metadata
+      );
+
+      if (resolved) {
+        if (resolved.totalCandidates === 1) {
+          return page.locator(resolved.candidate.selector).nth(
+            resolved.candidate.elementIndex
+          );
+        }
+
+        if (resolved.candidate.score >= MIN_CONFIDENCE_SCORE) {
+          return page.locator(resolved.candidate.selector).nth(
+            resolved.candidate.elementIndex
+          );
+        }
+
+        lastError = `AMBIGUOUS_LOCATOR: ${resolved.totalCandidates} candidates found, best score=${resolved.candidate.score}, selector=${resolved.candidate.selector}`;
+      }
+
+      await page.waitForTimeout(LOCATOR_POLL_INTERVAL_MS);
     }
 
-    // Parallel Race: Check all candidates for visibility
-    // We create a promise for each candidate that resolves if the element becomes visible
-    // and returns the corresponding Locator.
-    const promises = candidates.map(async (selector) => {
-      const loc = page.locator(selector).first();
+    throw new Error(
+      `Failed to resolve locator. Tried selectors=${JSON.stringify(
+        candidates
+      )}, metadata=${JSON.stringify(metadata || {})}, reason=${lastError}`
+    );
+  }
+
+  private async pickBestCandidate(
+    page: Page,
+    selectors: string[],
+    metadata?: CandidateMetadata
+  ): Promise<{ candidate: CandidateInfo; totalCandidates: number } | null> {
+    const rawCandidates: CandidateInfo[] = [];
+
+    for (const [selectorOrder, selector] of selectors.entries()) {
+      const locator = page.locator(selector);
+      let count = 0;
+
       try {
-        // Wait for it to be visible.
-        // We use the full timeout for each parallel check.
-        // The first one to succeed wins.
-        await loc.waitFor({ state: "visible", timeout });
-        return loc;
-      } catch (err) {
-        // If this specific selector fails, we throw so Promise.any ignores it
-        // (unless all fail)
-        throw err;
+        count = await locator.count();
+      } catch {
+        continue;
       }
+
+      if (count === 0) continue;
+
+      const evaluated = await locator.evaluateAll(
+        (
+          elements,
+          payload: { metadata?: CandidateMetadata; selector: string; selectorOrder: number }
+        ) => {
+          const getImplicitRoleForElement = (element: Element): string | null => {
+            const tagName = element.tagName.toLowerCase();
+            const type =
+              element instanceof HTMLInputElement
+                ? element.getAttribute("type")
+                : null;
+
+            const roleMap: Record<string, string> = {
+              button: "button",
+              input:
+                type === "text" || !type
+                  ? "textbox"
+                  : type === "checkbox"
+                    ? "checkbox"
+                    : type === "radio"
+                      ? "radio"
+                      : type === "button" || type === "submit"
+                        ? "button"
+                        : "",
+              textarea: "textbox",
+              select: "combobox",
+            };
+            return roleMap[tagName] || null;
+          };
+
+          const getAssociatedLabelText = (element: Element): string | null => {
+            if (
+              !(element instanceof HTMLInputElement) &&
+              !(element instanceof HTMLTextAreaElement) &&
+              !(element instanceof HTMLSelectElement)
+            ) {
+              return null;
+            }
+
+            if (element.id) {
+              const label = document.querySelector(
+                `label[for="${CSS.escape(element.id)}"]`
+              );
+              if (label) return label.textContent?.trim() || null;
+            }
+
+            const parentLabel = element.closest("label");
+            if (parentLabel) {
+              const clone = parentLabel.cloneNode(true) as HTMLElement;
+              const input = clone.querySelector("input, textarea, select");
+              if (input) input.remove();
+              const text = clone.textContent?.trim();
+              if (text) return text;
+            }
+
+            const labelledBy = element.getAttribute("aria-labelledby");
+            if (labelledBy) {
+              const labelEl = document.getElementById(labelledBy);
+              if (labelEl) return labelEl.textContent?.trim() || null;
+            }
+
+            const prevSibling = element.previousElementSibling;
+            if (prevSibling && prevSibling.tagName.toLowerCase() === "label") {
+              return prevSibling.textContent?.trim() || null;
+            }
+
+            const parent = element.parentElement;
+            if (parent) {
+              const labelInParent = parent.querySelector("label");
+              if (labelInParent) {
+                const forAttr = labelInParent.getAttribute("for");
+                if (!forAttr || forAttr === element.id) {
+                  return labelInParent.textContent?.trim() || null;
+                }
+              }
+            }
+
+            return null;
+          };
+
+          const getFormFieldIndex = (element: Element): number | null => {
+            if (!(element instanceof HTMLElement)) return null;
+            const form = element.closest("form");
+            if (!form) return null;
+            const fields = Array.from(
+              form.querySelectorAll("input, textarea, select")
+            );
+            const index = fields.indexOf(element);
+            return index >= 0 ? index + 1 : null;
+          };
+
+          const isVisible = (element: Element): boolean => {
+            if (!(element instanceof HTMLElement || element instanceof SVGElement)) {
+              return false;
+            }
+            const style = window.getComputedStyle(element);
+            if (
+              style.display === "none" ||
+              style.visibility === "hidden" ||
+              style.opacity === "0"
+            ) {
+              return false;
+            }
+            if (element.getClientRects().length === 0) {
+              return false;
+            }
+            return true;
+          };
+
+          const isInteractable = (element: Element): boolean => {
+            if (!(element instanceof HTMLElement || element instanceof SVGElement)) {
+              return false;
+            }
+            if (!isVisible(element)) return false;
+
+            if (
+              element instanceof HTMLInputElement ||
+              element instanceof HTMLTextAreaElement ||
+              element instanceof HTMLSelectElement ||
+              element instanceof HTMLButtonElement
+            ) {
+              if (element.disabled) return false;
+            }
+
+            const style = window.getComputedStyle(element);
+            return style.pointerEvents !== "none";
+          };
+
+          const getDomPath = (element: Element): string => {
+            const parts: string[] = [];
+            let current: Element | null = element;
+            while (current && current !== document.body) {
+              const tag = current.tagName.toLowerCase();
+              let siblingIndex = 1;
+              let sibling = current.previousElementSibling;
+              while (sibling) {
+                if (sibling.tagName === current.tagName) siblingIndex += 1;
+                sibling = sibling.previousElementSibling;
+              }
+              parts.unshift(`${tag}:nth-of-type(${siblingIndex})`);
+              current = current.parentElement;
+            }
+            return parts.join(">");
+          };
+
+          const calculateScore = (
+            element: Element,
+            candidateMetadata?: CandidateMetadata
+          ): number => {
+            if (!candidateMetadata) return 0;
+
+            let score = 0;
+            const elementTag = element.tagName.toLowerCase();
+
+            if (
+              candidateMetadata.testId &&
+              element instanceof HTMLElement &&
+              (element.getAttribute("data-testid") === candidateMetadata.testId ||
+                element.getAttribute("data-test") === candidateMetadata.testId ||
+                element.getAttribute("data-cy") === candidateMetadata.testId ||
+                element.getAttribute("data-test-id") === candidateMetadata.testId)
+            ) {
+              score += 120;
+            }
+
+            if (candidateMetadata.labelText) {
+              const labelText = getAssociatedLabelText(element);
+              if (labelText === candidateMetadata.labelText) {
+                score += 100;
+              } else if (
+                labelText &&
+                labelText.includes(candidateMetadata.labelText)
+              ) {
+                score += 50;
+              }
+            }
+
+            if (candidateMetadata.formContext?.fieldIndex) {
+              const index = getFormFieldIndex(element);
+              if (index === candidateMetadata.formContext.fieldIndex) {
+                score += 90;
+              }
+            }
+
+            if (
+              candidateMetadata.placeholder &&
+              element instanceof HTMLElement &&
+              element.getAttribute("placeholder") === candidateMetadata.placeholder
+            ) {
+              score += 70;
+            }
+
+            if (
+              candidateMetadata.ariaLabel &&
+              element instanceof HTMLElement &&
+              element.getAttribute("aria-label") === candidateMetadata.ariaLabel
+            ) {
+              score += 60;
+            }
+
+            if (candidateMetadata.tagName && elementTag === candidateMetadata.tagName) {
+              score += 20;
+            }
+
+            if (candidateMetadata.role) {
+              const elementRole =
+                element instanceof HTMLElement
+                  ? element.getAttribute("role") || getImplicitRoleForElement(element)
+                  : null;
+              if (elementRole === candidateMetadata.role) {
+                score += 10;
+              }
+            }
+
+            return score;
+          };
+
+          return elements.map((element, elementIndex) => ({
+            selector: payload.selector,
+            selectorOrder: payload.selectorOrder,
+            elementIndex,
+            score: calculateScore(element, payload.metadata),
+            visible: isVisible(element),
+            interactable: isInteractable(element),
+            domPath: getDomPath(element),
+          }));
+        },
+        { metadata, selector, selectorOrder }
+      );
+
+      rawCandidates.push(...evaluated);
+    }
+
+    const filtered = rawCandidates.filter((item) => item.visible && item.interactable);
+    if (filtered.length === 0) {
+      return null;
+    }
+
+    const deduped = new Map<string, CandidateInfo>();
+    for (const item of filtered) {
+      const prev = deduped.get(item.domPath);
+      if (!prev) {
+        deduped.set(item.domPath, item);
+        continue;
+      }
+      if (
+        item.score > prev.score ||
+        (item.score === prev.score && item.selectorOrder < prev.selectorOrder)
+      ) {
+        deduped.set(item.domPath, item);
+      }
+    }
+
+    const resolved = Array.from(deduped.values());
+    resolved.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      if (a.selectorOrder !== b.selectorOrder) return a.selectorOrder - b.selectorOrder;
+      return a.elementIndex - b.elementIndex;
     });
 
-    try {
-      // Promise.any resolves with the first fulfilled promise.
-      // If all reject, it throws an AggregateError.
-      const winner = await Promise.any(promises);
-      return winner;
-    } catch (error) {
-      // If all failed, throw a descriptive error
-      throw new Error(
-        `Failed to resolve locator. Tried candidates: ${JSON.stringify(
-          candidates
-        )}. Error: ${(error as Error).message}`
-      );
-    }
+    return {
+      candidate: resolved[0],
+      totalCandidates: resolved.length,
+    };
   }
 }

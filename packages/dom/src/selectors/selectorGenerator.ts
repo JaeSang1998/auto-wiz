@@ -459,9 +459,9 @@ export function generateRobustLocator(element: HTMLElement): ElementLocator {
       metadata.formContext = formContext;
       // Form context 기반 selector 추가 (fallback용)
       selectors.push(
-        `${formContext.formSelector} :nth-child(${formContext.fieldIndex}) input, ` +
-          `${formContext.formSelector} :nth-child(${formContext.fieldIndex}) textarea, ` +
-          `${formContext.formSelector} :nth-child(${formContext.fieldIndex}) select`
+        `${formContext.formSelector} input, ` +
+          `${formContext.formSelector} textarea, ` +
+          `${formContext.formSelector} select`
       );
     }
   }
@@ -505,4 +505,3 @@ export function generateSelector(element: HTMLElement): string {
   const locator = generateRobustLocator(element);
   return locator.primary;
 }
-

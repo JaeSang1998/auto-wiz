@@ -27,7 +27,7 @@ import { FlowControls } from "@auto-wiz/ui";
  */
 function SidePanelApp() {
   const [flow, setFlow] = useState<Flow | null>(null);
-  const [endpoint, setEndpoint] = useState("https://api.example.com/flows");
+  const [endpoint, setEndpoint] = useState("http://127.0.0.1:3001/run/playwright");
   const [startUrl, setStartUrl] = useState("");
   const [pickerOn, setPickerOn] = useState(false);
   const [recording, setRecording] = useState(false);
