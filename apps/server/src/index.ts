@@ -16,6 +16,7 @@ app.use(express.json());
 app.post("/run/playwright", async (req, res) => {
   const flow: Flow = req.body;
   console.log(`[Playwright] Received flow: ${flow.title}`);
+  console.log("[Playwright] payload:", JSON.stringify(req.body, null, 2));
 
   let browser;
   try {
